@@ -2,7 +2,7 @@ CC := arm-none-eabi-gcc
 AR := arm-none-eabi-ar
 SIZE := arm-none-eabi-size
 
-STM32_CUBE_DIR := $(HOME)/devtools/STM32Cube_FW_F1_V1.8.0
+STM32_CUBE_DIR := $(STM32CUBEF1_DIR)
 LIB_OUT_DIR := build/lib
 OUT_DIR := build
 LIB_TARGET := $(LIB_OUT_DIR)/libstm32f1cube.a
@@ -24,8 +24,20 @@ SRC_DIRS := \
 
 CPU_C_FLAGS := -mcpu=cortex-m3 -mthumb
 
-C_FLAGS := $(addprefix -I, $(C_INCLUDE_DIRS)) -DSTM32F103xB $(CPU_C_FLAGS) -g3 -O3 -ffunction-sections -fdata-sections -Wl,--gc-sections
-LD_FLAGS := -L$(dir $(LIB_TARGET)) -l stm32f1cube -T STM32F103XB_FLASH.ld --specs=nano.specs --specs=nosys.specs
+C_FLAGS := \
+	$(addprefix -I, $(C_INCLUDE_DIRS)) \
+	-DSTM32F103xB $(CPU_C_FLAGS) \
+	-g3 -Os \
+	-ffunction-sections \
+	-fdata-sections \
+	-Wl,--gc-sections
+
+LD_FLAGS := \
+	-L$(dir $(LIB_TARGET)) \
+	-l stm32f1cube \
+	-T STM32F103XB_FLASH.ld \
+	--specs=nano.specs \
+	--specs=nosys.specs
 
 C_SOURCES := $(shell find $(SRC_DIRS) -name "*.c")
 S_SOURCES := $(shell find $(SRC_DIRS) -name "*.s")

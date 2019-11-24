@@ -1,0 +1,14 @@
+stages:
+    - build
+
+build-elf:
+    image: javiervarez/ate_builder:latest
+    tags:
+        - arm-none-eabi
+    stage: build
+    script:
+        - make
+    artifacts:
+        paths: ["build/stm32f1_fw.elf"]
+        expire_in: 1 week
+        name: "stm32f1_fw"

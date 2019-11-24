@@ -66,7 +66,8 @@ static void CreateTask(task_func func)
 	if (n_tasks < MAX_TASKS)
 	{
 		n_tasks++;
-		struct complete_task_stack_frame* task_psp = &stack[STACK_SIZE - 1 - TASK_STACK_SIZE * n_tasks - sizeof(struct complete_task_stack_frame)];
+		struct complete_task_stack_frame* task_psp = 
+			(struct complete_task_stack_frame*) &stack[STACK_SIZE - 1 - TASK_STACK_SIZE * n_tasks - sizeof(struct complete_task_stack_frame)];
 		task_psp->autosave.ret_addr = (uint32_t)func | 0x01;
 		task_psp->autosave.xpsr = 1 << 24;
 		task_psp->autosave.lr = 0xA5A5A5A5;
@@ -123,7 +124,7 @@ static void StartScheduler()
 	scheduler_active = 1;
 
 	// Start executing first task
-	__set_PSP(tasks_psp[0]);
+	__set_PSP((uint32_t)tasks_psp[0]);
 	__asm volatile 	( " cpsie i " ::: "memory" );
 	__set_CONTROL(0x03);
 	gpio_task1();
