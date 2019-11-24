@@ -25,7 +25,7 @@ SRC_DIRS := \
 CPU_C_FLAGS := -mcpu=cortex-m3 -mthumb
 
 C_FLAGS := $(addprefix -I, $(C_INCLUDE_DIRS)) -DSTM32F103xB $(CPU_C_FLAGS) -g3 -O3 -ffunction-sections -fdata-sections -Wl,--gc-sections
-LD_FLAGS := -L$(dir $(LIB_TARGET)) -l stm32f1cube -T STM32F103XB_FLASH.ld --specs=nano.specs
+LD_FLAGS := -L$(dir $(LIB_TARGET)) -l stm32f1cube -T STM32F103XB_FLASH.ld --specs=nano.specs --specs=nosys.specs
 
 C_SOURCES := $(shell find $(SRC_DIRS) -name "*.c")
 S_SOURCES := $(shell find $(SRC_DIRS) -name "*.s")
