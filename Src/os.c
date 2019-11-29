@@ -1,5 +1,6 @@
 #include "os.h"
 #include "stm32f1xx.h"
+#include "stddef.h"
 
 #define __NAKED				__attribute__((naked))
 
@@ -16,7 +17,8 @@ static volatile void* tasks_psp[MAX_TASKS];
 static volatile int n_tasks = 0;
 static volatile int current_task = 0;
 
-static volatile uint8_t stack[STACK_SIZE] __attribute__ ((aligned(8)));
+static uint8_t memory_pool[POOL_SIZE];
+static uint8_t* memory_pool_ptr = NULL;
 
 struct task_stack_frame
 {
@@ -30,32 +32,83 @@ struct task_stack_frame
 	uint32_t xpsr;
 } __PACKED;
 
+struct manual_task_stack_frame
+{
+	uint32_t r4;
+	uint32_t r5;
+	uint32_t r6;
+	uint32_t r7;
+	uint32_t r8;
+	uint32_t r9;
+	uint32_t r10;
+	uint32_t r11;
+	uint32_t lr;
+} __PACKED;
+
 struct complete_task_stack_frame
 {
-       uint32_t r4;
-       uint32_t r5;
-       uint32_t r6;
-       uint32_t r7;
-       uint32_t r8;
-       uint32_t r9;
-       uint32_t r10;
-       uint32_t r11;
-       uint32_t lr;
-       struct task_stack_frame autosave;
+		struct manual_task_stack_frame manual;
+        struct task_stack_frame autosave;
 } __PACKED;
+
+static void* AllocateTaskStack(size_t size)
+{
+	if (memory_pool_ptr == NULL)
+	{
+		memory_pool_ptr = &memory_pool[POOL_SIZE];
+	}
+
+	if (&memory_pool[size] > memory_pool_ptr)
+	{
+		return NULL;
+	}
+
+	memory_pool_ptr -= size;
+	return memory_pool_ptr;
+}
+
+static void* AllocateTaskStackFrame(void* stack_ptr)
+{
+	if (stack_ptr == NULL)
+		return NULL;
+
+	uintptr_t retval =
+		(uintptr_t)(stack_ptr - sizeof(struct task_stack_frame));
+
+	// Align on 8 byte boundary
+	return (void*)(retval & 0xfffffff8);
+}
+
+static void* AllocateCompleteTaskStackFrame(void* stack_ptr)
+{
+	void* ptr = AllocateTaskStackFrame(stack_ptr);
+	return ptr - sizeof(struct manual_task_stack_frame);
+}
+
+static void InitializeTask(
+	struct complete_task_stack_frame* stack_frame_ptr,
+	task_func func)
+{
+	stack_frame_ptr->autosave.pc = (uint32_t)func;
+	stack_frame_ptr->autosave.xpsr = 1 << 24;
+	stack_frame_ptr->autosave.lr = 0xA5A5A5A5;
+	stack_frame_ptr->manual.lr = 0xfffffffd;
+}
 
 void CreateTask(task_func func)
 {
 	if (n_tasks < MAX_TASKS)
 	{
+		void* task_stack_top = AllocateTaskStack(TASK_STACK_SIZE);
+		if (task_stack_top == NULL)
+			return;
+
+		struct complete_task_stack_frame* task_stack_ptr =
+			AllocateCompleteTaskStackFrame(task_stack_top);
+		InitializeTask(task_stack_ptr, func);
+
+		tasks_psp[n_tasks] = task_stack_ptr;
 		n_tasks++;
-		struct complete_task_stack_frame* task_psp = 
-			(struct complete_task_stack_frame*) &stack[STACK_SIZE - 1 - TASK_STACK_SIZE * n_tasks - sizeof(struct complete_task_stack_frame)];
-		task_psp->autosave.pc = (uint32_t)func;
-		task_psp->autosave.xpsr = 1 << 24;
-		task_psp->autosave.lr = 0xA5A5A5A5;
-        task_psp->lr = 0xfffffffd;
-		tasks_psp[n_tasks - 1] = task_psp;
 	}
 }
 
