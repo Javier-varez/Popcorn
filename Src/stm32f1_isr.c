@@ -21,10 +21,3 @@ void UsageFault_Handler()
 {
 	while (1);	
 }
-
-void SysTick_Handler()
-{
-	HAL_IncTick();
-	if (scheduler_active)
-		SCB->ICSR |= SCB_ICSR_PENDSVSET_Msk;
-}

@@ -1,42 +1,33 @@
 #include "stm32f1xx_hal.h"
 #include "os.h"
 
-static void gpio_task1()
+struct TaskArgs
 {
-	__HAL_RCC_GPIOC_CLK_ENABLE();
+	GPIO_TypeDef*	bank;
+	uint16_t		pin;
+	uint32_t		delay;
+};
+
+static void gpio_task(struct TaskArgs* args)
+{
+	if (args->bank == GPIOA)
+		__HAL_RCC_GPIOA_CLK_ENABLE();
+	else if (args->bank == GPIOC)
+		__HAL_RCC_GPIOC_CLK_ENABLE();
 
 	GPIO_InitTypeDef gpio;
-	gpio.Pin = GPIO_PIN_13;
+	gpio.Pin = args->pin;
 	gpio.Mode = GPIO_MODE_OUTPUT_PP;
 	gpio.Pull = GPIO_NOPULL;
 	gpio.Speed = GPIO_SPEED_FREQ_LOW;
-	HAL_GPIO_Init(GPIOC, &gpio);
+	HAL_GPIO_Init(args->bank, &gpio);
 
 	while (1)
 	{
-		HAL_Delay(1000);
-		HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
+		HAL_Delay(args->delay);
+		HAL_GPIO_TogglePin(args->bank, args->pin);
 	}
 }
-
-static void gpio_task2()
-{
-	__HAL_RCC_GPIOA_CLK_ENABLE();
-
-	GPIO_InitTypeDef gpio;
-	gpio.Pin = GPIO_PIN_0;
-	gpio.Mode = GPIO_MODE_OUTPUT_PP;
-	gpio.Pull = GPIO_NOPULL;
-	gpio.Speed = GPIO_SPEED_FREQ_LOW;
-	HAL_GPIO_Init(GPIOA, &gpio);
-
-	while (1)
-	{
-		HAL_Delay(1500);
-		HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_0);
-	}
-}
-
 
 static void ConfigureClk()
 {
@@ -68,14 +59,34 @@ static void ConfigureClk()
 	HAL_RCC_ClockConfig(&clkInit, FLASH_ACR_LATENCY_2);
 }
 
+void InitTask(void *args)
+{
+	static struct TaskArgs args_task_1 = 
+	{
+		GPIOC,
+		GPIO_PIN_13,
+		1000
+	};
+
+	static struct TaskArgs args_task_2 = 
+	{
+		GPIOA,
+		GPIO_PIN_0,
+		1500
+	};
+
+	CreateTask(gpio_task, (uintptr_t)&args_task_1, "GPIOC_13");
+	CreateTask(gpio_task, (uintptr_t)&args_task_2, "GPIOA_0");
+
+	while(1);
+}
+
 int main()
 {
 	HAL_Init();
 	ConfigureClk();
 
-	CreateTask(gpio_task1);
-	CreateTask(gpio_task2);
-
+	CreateTask(InitTask, (uintptr_t)NULL, "Init task");
 	StartOS();
 	return 0;
 }
