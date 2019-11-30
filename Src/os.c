@@ -4,13 +4,15 @@
 
 #define __NAKED				__attribute__((naked))
 
-#define STRINGIZE(_x)		#_x
-#define SVC_CALL(_x)		asm volatile("svc " STRINGIZE(_x))
+#define STRINGIZE(_x)				#_x
+#define STRINGIZE_MACRO(_x)			STRINGIZE(_x)
+#define SVC_CALL(_x)				asm volatile("svc " STRINGIZE(_x))
 
 #define START_OS_SVC		2
 
+#define XPSR_INIT_VALUE				(1 << 24)
+#define INVALID_LR_VALUE			(0xA5A5A5A5)
 #define EXC_RETURN_PSP_UNPRIV		0xFFFFFFFD
-
 volatile int scheduler_active = 0;
 
 static volatile void* tasks_psp[MAX_TASKS];
@@ -90,9 +92,9 @@ static void InitializeTask(
 	task_func func)
 {
 	stack_frame_ptr->autosave.pc = (uint32_t)func;
-	stack_frame_ptr->autosave.xpsr = 1 << 24;
-	stack_frame_ptr->autosave.lr = 0xA5A5A5A5;
-	stack_frame_ptr->manual.lr = 0xfffffffd;
+	stack_frame_ptr->autosave.xpsr = XPSR_INIT_VALUE;
+	stack_frame_ptr->autosave.lr = INVALID_LR_VALUE;
+	stack_frame_ptr->manual.lr = EXC_RETURN_PSP_UNPRIV;
 }
 
 void CreateTask(task_func func)
@@ -112,20 +114,34 @@ void CreateTask(task_func func)
 	}
 }
 
-static uint32_t StartOS_SVC_Handler()
+__NAKED static uint32_t StartOS_SVC_Handler()
 {
 	scheduler_active = 1;
-    __NVIC_SetPriority(SysTick_IRQn, 0x00);
-    __NVIC_SetPriority(PendSV_IRQn,  0xFF);
 
+	// Set OS IRQ priorities
+    __NVIC_SetPriority(SysTick_IRQn, 0xFF); // Minimum priority for SysTick
+    __NVIC_SetPriority(PendSV_IRQn,  0xFF); // Minimum priority for PendSV
+
+	// Obtain first task stack pointer
     struct complete_task_stack_frame* frame =
         (struct complete_task_stack_frame*)tasks_psp[0];
 
 	// Start executing first task
 	__set_PSP((uint32_t)&frame->autosave);
-	__set_CONTROL(0x03);
 
-	return EXC_RETURN_PSP_UNPRIV;
+	// Obain top of the stack from current NVIC table and set MSP
+	uintptr_t vtor = SCB->VTOR;
+	uintptr_t stack_top = ((volatile uint32_t*)vtor)[0];
+	__set_MSP(stack_top);
+	__DSB();
+    __ISB();
+
+	// Use exception return code for Unprivileged and PSP stack
+	asm volatile (
+		"    mov lr, #" STRINGIZE_MACRO(EXC_RETURN_PSP_UNPRIV) "	\n"
+		"    bx lr                          						\n"
+		: : [stack_top] "r" (stack_top)
+	);
 }
 
 __NAKED void PendSV_Handler()
@@ -170,7 +186,7 @@ void SVC_Handler_C(struct task_stack_frame* args)
 	switch (svc_code)
 	{
 	case START_OS_SVC:
-		lr = StartOS_SVC_Handler();
+		StartOS_SVC_Handler();
 		break;
 	
 	default:
@@ -180,8 +196,8 @@ void SVC_Handler_C(struct task_stack_frame* args)
 
 	// Update lr if required
 	asm volatile(
-		"    teq %[lr], #0			\n"
-		"    it ne								\n"
+		"    teq %[lr], #0				\n"
+		"    it ne						\n"
 		"    movne lr, %[lr]			  "
 		: : [lr] "r" (lr) 
 	);
