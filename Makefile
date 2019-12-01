@@ -1,4 +1,5 @@
 CC := arm-none-eabi-gcc
+CXX := arm-none-eabi-g++
 AR := arm-none-eabi-ar
 SIZE := arm-none-eabi-size
 
@@ -32,6 +33,8 @@ C_FLAGS := \
 	-fdata-sections \
 	-Wl,--gc-sections
 
+CXX_FLAGS := $(C_FLAGS)
+
 LD_FLAGS := \
 	-L$(dir $(LIB_TARGET)) \
 	-l stm32f1cube \
@@ -40,8 +43,10 @@ LD_FLAGS := \
 	--specs=nosys.specs
 
 C_SOURCES := $(shell find $(SRC_DIRS) -name "*.c")
+CPP_SOURCES := $(shell find $(SRC_DIRS) -name "*.cpp")
 S_SOURCES := $(shell find $(SRC_DIRS) -name "*.s")
 C_OBJECTS := $(addprefix $(OUT_DIR)/, $(patsubst %.c, %.o, $(C_SOURCES)))
+CPP_OBJECTS := $(addprefix $(OUT_DIR)/, $(patsubst %.cpp, %.o, $(CPP_SOURCES)))
 S_OBJECTS := $(addprefix $(OUT_DIR)/, $(patsubst %.s, %.o, $(S_SOURCES)))
 
 C_LIB_SOURCES := $(shell find $(C_LIB_SRC_DIR) -name "*.c")
@@ -57,13 +62,17 @@ $(LIB_OUT_DIR)/%.o: $(C_LIB_SRC_DIR)/%.c
 	mkdir -p $(dir $@)
 	$(CC) -c $(C_FLAGS) -o $@ $^
 
-$(TARGET): $(LIB_TARGET) $(C_OBJECTS) $(S_OBJECTS)
-	$(CC) $(C_FLAGS) -o $@ $(C_OBJECTS) $(S_OBJECTS) $(LD_FLAGS)
+$(TARGET): $(LIB_TARGET) $(CPP_OBJECTS) $(C_OBJECTS) $(S_OBJECTS)
+	$(CC) $(C_FLAGS) -o $@ $(C_OBJECTS) $(CPP_OBJECTS) $(S_OBJECTS) $(LD_FLAGS)
 	$(SIZE) $@
 
 $(OUT_DIR)/%.o: %.c
 	mkdir -p $(dir $@)
 	$(CC) -c $(C_FLAGS) -o $@ $^
+
+$(OUT_DIR)/%.o: %.cpp
+	mkdir -p $(dir $@)
+	$(CXX) -c $(CXX_FLAGS) -o $@ $^
 
 $(OUT_DIR)/%.o: %.s
 	mkdir -p $(dir $@)

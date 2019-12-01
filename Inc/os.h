@@ -1,6 +1,6 @@
 #include "stdint.h"
 
-#define MAX_TASKS           2
+#define MAX_TASKS           10
 #define POOL_SIZE           (1024 * 10)
 #define TASK_STACK_SIZE     1024
 #define MAX_TASK_NAME       10
