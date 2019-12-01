@@ -33,7 +33,9 @@ C_FLAGS := \
 	-fdata-sections \
 	-Wl,--gc-sections
 
-CXX_FLAGS := $(C_FLAGS)
+CXX_FLAGS := $(C_FLAGS) \
+	-fno-exceptions \
+	-fno-rtti
 
 LD_FLAGS := \
 	-L$(dir $(LIB_TARGET)) \
