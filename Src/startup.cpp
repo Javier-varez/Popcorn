@@ -38,6 +38,7 @@ void Reset_Handler() {
     __attribute__((weak)) \
     __attribute__((noreturn)) \
     void name() { \
+        asm("bkpt #0"); \
         while(true); \
     }
 
