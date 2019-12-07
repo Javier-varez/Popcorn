@@ -52,7 +52,7 @@ CPP_OBJECTS := $(addprefix $(OUT_DIR)/, $(patsubst %.cpp, %.o, $(CPP_SOURCES)))
 S_OBJECTS := $(addprefix $(OUT_DIR)/, $(patsubst %.s, %.o, $(S_SOURCES)))
 
 C_LIB_SOURCES := $(shell find $(C_LIB_SRC_DIR) -name "*.c")
-C_LIB_OBJECTS := $(addprefix $(LIB_OUT_DIR)/, $(notdir $(patsubst %.c, %.o, $(C_LIB_SOURCES))))
+C_LIB_OBJECTS := $(addprefix $(LIB_OUT_DIR)/, $(notdir $(patsubst %.c, %.o, $(filter-out %template.c, $(C_LIB_SOURCES)))))
 
 all: $(TARGET)
 .PHONY: all
