@@ -7,7 +7,7 @@ build-elf:
         - arm-none-eabi
     stage: build
     script:
-        - make -j
+        - time make -j
     artifacts:
         paths: ["build/stm32f1_fw.elf"]
         expire_in: 1 week
