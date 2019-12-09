@@ -4,6 +4,8 @@
 extern "C"
 void SystemInit (void);
 
+extern std::uint32_t _estack;
+
 extern "C"
 void Reset_Handler() {
     // Initialize data section
@@ -29,7 +31,11 @@ void Reset_Handler() {
     SystemInit();
 
     // Jump to main
-    asm ("bl main");
+    asm volatile (
+        "msr msp, %[stack_top]\n"
+        "bl main"
+        : : [stack_top] "r" (&_estack)
+    );
 }
 
 #define DEFINE_DEFAULT_ISR(name) \
@@ -48,7 +54,6 @@ DEFINE_DEFAULT_ISR(SVC_Handler)
 DEFINE_DEFAULT_ISR(PendSV_Handler)
 DEFINE_DEFAULT_ISR(SysTick_Handler)
 
-extern std::uint32_t _estack;
 extern std::uintptr_t g_pfnVectors[];
 std::uintptr_t g_pfnVectors[]
 __attribute__((section(".isr_vector"))) {
