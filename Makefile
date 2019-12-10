@@ -37,6 +37,9 @@ CXX_FLAGS := $(C_FLAGS) \
 	-fno-exceptions \
 	-fno-rtti
 
+DEPENDENCY_PARAMS := \
+	-MMD -MF 
+
 LD_FLAGS := \
 	-L$(dir $(LIB_TARGET)) \
 	-l stm32f1cube \
@@ -50,6 +53,7 @@ S_SOURCES := $(shell find $(SRC_DIRS) -name "*.s")
 C_OBJECTS := $(addprefix $(OUT_DIR)/, $(patsubst %.c, %.o, $(C_SOURCES)))
 CPP_OBJECTS := $(addprefix $(OUT_DIR)/, $(patsubst %.cpp, %.o, $(CPP_SOURCES)))
 S_OBJECTS := $(addprefix $(OUT_DIR)/, $(patsubst %.s, %.o, $(S_SOURCES)))
+OBJECTS := $(CPP_OBJECTS) $(C_OBJECTS) $(S_OBJECTS)
 
 C_LIB_SOURCES := $(shell find $(C_LIB_SRC_DIR) -name "*.c")
 C_LIB_OBJECTS := $(addprefix $(LIB_OUT_DIR)/, $(notdir $(patsubst %.c, %.o, $(filter-out %template.c, $(C_LIB_SOURCES)))))
@@ -62,7 +66,7 @@ $(LIB_TARGET): $(C_LIB_OBJECTS)
 
 $(LIB_OUT_DIR)/%.o: $(C_LIB_SRC_DIR)/%.c
 	mkdir -p $(dir $@)
-	$(CC) -c $(C_FLAGS) -o $@ $^
+	$(CC) -c $(C_FLAGS) -o $@ $(filter-out %.h, $^) $(DEPENDENCY_PARAMS)$(patsubst %.o, %.d, $@)
 
 $(TARGET): $(LIB_TARGET) $(CPP_OBJECTS) $(C_OBJECTS) $(S_OBJECTS)
 	$(CC) $(C_FLAGS) -o $@ $(C_OBJECTS) $(CPP_OBJECTS) $(S_OBJECTS) $(LD_FLAGS)
@@ -70,16 +74,18 @@ $(TARGET): $(LIB_TARGET) $(CPP_OBJECTS) $(C_OBJECTS) $(S_OBJECTS)
 
 $(OUT_DIR)/%.o: %.c
 	mkdir -p $(dir $@)
-	$(CC) -c $(C_FLAGS) -o $@ $^
+	$(CC) -c $(C_FLAGS) -o $@ $(filter-out %.h, $^) $(DEPENDENCY_PARAMS)$(patsubst %.o, %.d, $@)
 
 $(OUT_DIR)/%.o: %.cpp
 	mkdir -p $(dir $@)
-	$(CXX) -c $(CXX_FLAGS) -o $@ $^
+	$(CXX) -c $(CXX_FLAGS) -o $@ $(filter-out %.h, $^) $(DEPENDENCY_PARAMS)$(patsubst %.o, %.d, $@)
 
 $(OUT_DIR)/%.o: %.s
 	mkdir -p $(dir $@)
-	$(CC) -c $(C_FLAGS) -o $@ $^
+	$(CC) -c $(C_FLAGS) -o $@ $(filter-out %.h, $^) $(DEPENDENCY_PARAMS)$(patsubst %.o, %.d, $@)
 
 clean:
 	rm -r $(OUT_DIR)
 .PHONY: clean
+
+-include $(patsubst %.o, %.d, $(OBJECTS))
