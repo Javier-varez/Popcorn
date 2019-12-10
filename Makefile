@@ -69,7 +69,7 @@ $(LIB_OUT_DIR)/%.o: $(C_LIB_SRC_DIR)/%.c
 	$(CC) -c $(C_FLAGS) -o $@ $(filter-out %.h, $^) $(DEPENDENCY_PARAMS)$(patsubst %.o, %.d, $@)
 
 $(TARGET): $(LIB_TARGET) $(CPP_OBJECTS) $(C_OBJECTS) $(S_OBJECTS)
-	$(CC) $(C_FLAGS) -o $@ $(C_OBJECTS) $(CPP_OBJECTS) $(S_OBJECTS) $(LD_FLAGS)
+	$(CC) $(C_FLAGS) -o $@ $(C_OBJECTS) $(CPP_OBJECTS) $(S_OBJECTS) $(LD_FLAGS) -Wl,-Map=$(TARGET).map
 	$(SIZE) $@
 
 $(OUT_DIR)/%.o: %.c

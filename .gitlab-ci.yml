@@ -9,6 +9,6 @@ build-elf:
     script:
         - time make -j
     artifacts:
-        paths: ["build/stm32f1_fw.elf"]
+        paths: ["build/stm32f1_fw.elf", "build/stm32f1_fw.elf.map"]
         expire_in: 1 week
         name: "stm32f1_fw"
