@@ -2,33 +2,42 @@
 #include "stm32f1xx_hal.h"
 #include <stddef.h>
 #include <string.h>
+#include "memory_management.h"
 
 #define __NAKED						__attribute__((naked))
 
-#define STRINGIZE(_x)				#_x
-#define STRINGIZE_MACRO(_x)			STRINGIZE(_x)
-#define SVC_CALL(_x)				asm volatile("svc " STRINGIZE(_x))
+#define __STRINGIZE(_x)				#_x
+#define STRINGIZE_MACRO(_x)			__STRINGIZE(_x)
+#define SVC_CALL(_x)				asm volatile("svc " __STRINGIZE(_x))
 
-#define START_OS_SVC		0
-#define CREATE_TASK_SVC		1
+#define START_OS_SVC				(0)
+#define CREATE_TASK_SVC				(1)
 
 #define XPSR_INIT_VALUE				(1 << 24)
 #define INVALID_LR_VALUE			(0xA5A5A5A5)
 #define EXC_RETURN_PSP_UNPRIV		(0xFFFFFFFD)
 
-struct Scheduler
+struct task_control_block
 {
-	uint8_t memory_pool[POOL_SIZE];
-	uint8_t* memory_pool_ptr;
-	
-	int active;
-	int n_tasks;
-	struct task_control_block current_task;
-	struct task_control_block tasks[MAX_TASKS];
-	int task_index;
+    uintptr_t                   stack_ptr;
+    enum PriorityLevel          priority;
+    uintptr_t                   arg;
+    task_func                   func;
+    char                        name[MAX_TASK_NAME];
+	struct task_control_block*  next;
 };
 
-static struct Scheduler scheduler;
+struct Scheduler
+{	
+	struct task_control_block *current_task;
+	struct task_control_block *tasks_head_ptr;
+};
+
+static struct Scheduler scheduler = 
+{
+	.current_task = NULL,
+	.tasks_head_ptr = NULL
+};
 
 struct auto_task_stack_frame
 {
@@ -40,7 +49,7 @@ struct auto_task_stack_frame
 	uint32_t lr;
 	uint32_t pc;
 	uint32_t xpsr;
-} __PACKED;
+};
 
 struct manual_task_stack_frame
 {
@@ -53,29 +62,23 @@ struct manual_task_stack_frame
 	uint32_t r10;
 	uint32_t r11;
 	uint32_t lr;
-} __PACKED;
+};
 
 struct task_stack_frame
 {
 		struct manual_task_stack_frame manualsave;
         struct auto_task_stack_frame autosave;
-} __PACKED;
+};
 
 static void* AllocateTaskStack(size_t size)
 {
-	if (scheduler.memory_pool_ptr == NULL)
+	void* task_stack_top = NULL;
+
+	uint8_t* stack = OsMalloc(size);
+	if (stack != NULL)
 	{
-		scheduler.memory_pool_ptr = &scheduler.memory_pool[POOL_SIZE-1];
+		task_stack_top = &stack[size-1];
 	}
-
-	if (&scheduler.memory_pool[size] > scheduler.memory_pool_ptr)
-	{
-		return NULL;
-	}
-
-	void* task_stack_top = scheduler.memory_pool_ptr;
-
-	scheduler.memory_pool_ptr -= size;
 
 	return task_stack_top;
 }
@@ -110,35 +113,53 @@ static void InitializeTask(
 	stack_frame_ptr->manualsave.lr = EXC_RETURN_PSP_UNPRIV;
 }
 
-void CreateTask_SVC_Handler(task_func func, uintptr_t arg, char* name)
+static void SchedulerAddTask(struct task_control_block* tcb)
 {
-	if (scheduler.n_tasks < MAX_TASKS)
+	// Insert task into list
+	struct task_control_block** head = &scheduler.tasks_head_ptr;
+	while (*head != NULL)
 	{
-		void* task_stack_top = AllocateTaskStack(TASK_STACK_SIZE);
-		if (task_stack_top == NULL)
-			return;
+		head = &(*head)->next;
+	}
+	*head = tcb;
+}
 
-		struct task_stack_frame* task_stack_ptr =
-			AllocateCompleteTaskStackFrame(task_stack_top);
-		if (NULL == task_stack_ptr)
-			return;	
+void CreateTask_SVC_Handler(task_func func, uintptr_t arg, enum PriorityLevel priority, char* name)
+{
+	struct task_control_block* tcb = 
+		(struct task_control_block*)OsMalloc(sizeof(struct task_control_block));
+	if (NULL == tcb)
+		return;
 
-		InitializeTask(task_stack_ptr, func, arg);
-
-		struct task_control_block* task_ptr = &scheduler.tasks[scheduler.n_tasks];
-		task_ptr->stack_ptr = (uintptr_t)task_stack_ptr;
-		task_ptr->arg  = arg;
-		task_ptr->func = func;
-		strncpy(task_ptr->name, name, MAX_TASK_NAME);
-		scheduler.n_tasks++;
-
+	void* task_stack_top = AllocateTaskStack(TASK_STACK_SIZE);
+	if (task_stack_top == NULL)
+	{
+		OsFree(tcb);
 		return;
 	}
+
+	struct task_stack_frame* task_stack_ptr =
+		AllocateCompleteTaskStackFrame(task_stack_top);
+	if (NULL == task_stack_ptr)
+		return;	
+
+	InitializeTask(task_stack_ptr, func, arg);
+
+	tcb->stack_ptr = (uintptr_t)task_stack_ptr;
+	tcb->arg  = arg;
+	tcb->priority = priority;
+	tcb->func = func;
+	strncpy(tcb->name, name, MAX_TASK_NAME);
+
+	SchedulerAddTask(tcb);
+
+	return;
 }
 
 __NAKED static uint32_t StartOS_SVC_Handler()
 {
-	scheduler.active = 1;
+	// Set first task
+	scheduler.current_task = scheduler.tasks_head_ptr;
 
 	// Set OS IRQ priorities
     __NVIC_SetPriority(SysTick_IRQn, 0xFF); // Minimum priority for SysTick
@@ -146,11 +167,7 @@ __NAKED static uint32_t StartOS_SVC_Handler()
 
 	// Obtain first task stack pointer
     struct task_stack_frame* frame =
-        (struct task_stack_frame*)scheduler.tasks[0].stack_ptr;
-
-	memcpy(&scheduler.current_task,
-		&scheduler.tasks[scheduler.task_index],
-		sizeof(struct task_control_block));	
+        (struct task_stack_frame*)scheduler.current_task->stack_ptr;
 
 	// Start executing first task by setting correct stack pointer
 	__set_PSP((uint32_t)&frame->autosave);
@@ -172,16 +189,11 @@ __NAKED static uint32_t StartOS_SVC_Handler()
 
 void SwitchTasks()
 {
-	memcpy(&scheduler.tasks[scheduler.task_index],
-		&scheduler.current_task,
-		sizeof(struct task_control_block));
-
-	scheduler.task_index = 
-		(scheduler.task_index + 1) % scheduler.n_tasks;
-	
-	memcpy(&scheduler.current_task,
-		&scheduler.tasks[scheduler.task_index],
-		sizeof(struct task_control_block));
+	scheduler.current_task = scheduler.current_task->next;
+	if (scheduler.current_task == NULL)
+	{
+		scheduler.current_task = scheduler.tasks_head_ptr;
+	}
 }
 
 __NAKED void PendSV_Handler()
@@ -189,13 +201,15 @@ __NAKED void PendSV_Handler()
 	asm volatile (
 		"    mrs r0, psp                       \n"
 		"    stmdb r0!, {r4-r11, r14}          \n"
-		"    str r0, [%[current_task_ptr]]     \n" // scheduler.current_task.stack_ptr = psp
+		"    ldr r1, [%[current_task_ptr]]     \n"
+		"    str r0, [r1]                      \n" // scheduler.current_task->stack_ptr = psp
 		"    push {r0, %[current_task_ptr]}    \n"
 		"    bl SwitchTasks				       \n"
 		"    pop {r0,  %[current_task_ptr]}    \n"
-		"    ldr r0, [%[current_task_ptr]]     \n" 
+		"    ldr r1, [%[current_task_ptr]]     \n"
+		"    ldr r0, [r1]                      \n" 
 		"    ldmia r0!, {r4-r11, r14}          \n"
-		"    msr psp, r0                       \n" // psp = scheduler.current_task.stack_ptr
+		"    msr psp, r0                       \n" // psp = scheduler.current_task->stack_ptr
 		"    isb                               \n"
 		"    bx lr                             \n"
 		: : 
@@ -206,7 +220,7 @@ __NAKED void PendSV_Handler()
 void SysTick_Handler()
 {
 	HAL_IncTick();
-	if (scheduler.active)
+	if (scheduler.current_task != NULL)
 		SCB->ICSR |= SCB_ICSR_PENDSVSET_Msk;
 }
 
@@ -236,7 +250,8 @@ void SVC_Handler_C(struct auto_task_stack_frame* args)
 		CreateTask_SVC_Handler(
 			(task_func)args->r0, 
 			(uintptr_t)args->r1, 
-			(char*)args->r2);
+			(enum PriorityLevel)args->r2, 
+			(char*)args->r3);
 		break;
 
 	default:
@@ -250,7 +265,7 @@ void StartOS()
 	SVC_CALL(START_OS_SVC);
 }
 
-void CreateTask(task_func func, uintptr_t arg, char* name)
+void CreateTask(task_func func, uintptr_t arg, enum PriorityLevel priority, char* name)
 {
 	SVC_CALL(CREATE_TASK_SVC);
 }

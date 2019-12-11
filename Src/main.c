@@ -75,8 +75,8 @@ void InitTask(void *args)
 		1500
 	};
 
-	CreateTask(gpio_task, (uintptr_t)&args_task_1, "GPIOC_13");
-	CreateTask(gpio_task, (uintptr_t)&args_task_2, "GPIOA_0");
+	CreateTask(gpio_task, (uintptr_t)&args_task_1, TASK_PRIO_0, "GPIOC_13");
+	CreateTask(gpio_task, (uintptr_t)&args_task_2, TASK_PRIO_0, "GPIOA_0");
 
 	while(1);
 }
@@ -86,7 +86,7 @@ int main()
 	HAL_Init();
 	ConfigureClk();
 
-	CreateTask(InitTask, (uintptr_t)NULL, "Init task");
+	CreateTask(InitTask, (uintptr_t)NULL, TASK_PRIO_0, "Init task");
 	StartOS();
 	return 0;
 }

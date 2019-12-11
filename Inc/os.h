@@ -1,19 +1,24 @@
 #include "stdint.h"
 
-#define MAX_TASKS           10
-#define POOL_SIZE           (1024 * 10)
 #define TASK_STACK_SIZE     1024
 #define MAX_TASK_NAME       10
 
 typedef void (*task_func)();
 
-struct task_control_block
+enum PriorityLevel
 {
-    uintptr_t stack_ptr;
-    uintptr_t arg;
-    task_func func;
-    char name[MAX_TASK_NAME];
-} __PACKED;
+    TASK_PRIO_IDLE = 0,
+    TASK_PRIO_0,
+    TASK_PRIO_1,
+    TASK_PRIO_2,
+    TASK_PRIO_3,
+    TASK_PRIO_4,
+    TASK_PRIO_5,
+    TASK_PRIO_6,
+    TASK_PRIO_7,
+    TASK_PRIO_8,
+    TASK_PRIO_9
+};
 
-void CreateTask(task_func func, uintptr_t arg, char* name);
+void CreateTask(task_func func, uintptr_t arg, enum PriorityLevel priority, char* name);
 void StartOS();
