@@ -1,3 +1,4 @@
+SILENT:=@
 CC := arm-none-eabi-gcc
 CXX := arm-none-eabi-g++
 AR := arm-none-eabi-ar
@@ -62,27 +63,33 @@ all: $(TARGET)
 .PHONY: all
 
 $(LIB_TARGET): $(C_LIB_OBJECTS)
-	$(AR) -rcs $@ $^
+	$(SILENT)echo "[$(LIB_TARGET)]"
+	$(SILENT)$(AR) -rcs $@ $^
 
 $(LIB_OUT_DIR)/%.o: $(C_LIB_SRC_DIR)/%.c
-	mkdir -p $(dir $@)
-	$(CC) -c $(C_FLAGS) -o $@ $(filter-out %.h, $^) $(DEPENDENCY_PARAMS)$(patsubst %.o, %.d, $@)
+	$(SILENT)echo "[$(notdir $@)]"
+	$(SILENT)mkdir -p $(dir $@)
+	$(SILENT)$(CC) -c $(C_FLAGS) -o $@ $(filter-out %.h, $^) $(DEPENDENCY_PARAMS)$(patsubst %.o, %.d, $@)
 
 $(TARGET): $(LIB_TARGET) $(CPP_OBJECTS) $(C_OBJECTS) $(S_OBJECTS)
-	$(CC) $(C_FLAGS) -o $@ $(C_OBJECTS) $(CPP_OBJECTS) $(S_OBJECTS) $(LD_FLAGS) -Wl,-Map=$(TARGET).map
+	$(SILENT)echo "[$(TARGET)]"
+	$(SILENT)$(CC) $(C_FLAGS) -o $@ $(C_OBJECTS) $(CPP_OBJECTS) $(S_OBJECTS) $(LD_FLAGS) -Wl,-Map=$(TARGET).map
 	$(SIZE) $@
 
 $(OUT_DIR)/%.o: %.c
-	mkdir -p $(dir $@)
-	$(CC) -c $(C_FLAGS) -o $@ $(filter-out %.h, $^) $(DEPENDENCY_PARAMS)$(patsubst %.o, %.d, $@)
+	$(SILENT)echo "[$(notdir $@)]"
+	$(SILENT)mkdir -p $(dir $@)
+	$(SILENT)$(CC) -c $(C_FLAGS) -o $@ $(filter-out %.h, $^) $(DEPENDENCY_PARAMS)$(patsubst %.o, %.d, $@)
 
 $(OUT_DIR)/%.o: %.cpp
-	mkdir -p $(dir $@)
-	$(CXX) -c $(CXX_FLAGS) -o $@ $(filter-out %.h, $^) $(DEPENDENCY_PARAMS)$(patsubst %.o, %.d, $@)
+	$(SILENT)echo "[$(notdir $@)]"
+	$(SILENT)mkdir -p $(dir $@)
+	$(SILENT)$(CXX) -c $(CXX_FLAGS) -o $@ $(filter-out %.h, $^) $(DEPENDENCY_PARAMS)$(patsubst %.o, %.d, $@)
 
 $(OUT_DIR)/%.o: %.s
-	mkdir -p $(dir $@)
-	$(CC) -c $(C_FLAGS) -o $@ $(filter-out %.h, $^) $(DEPENDENCY_PARAMS)$(patsubst %.o, %.d, $@)
+	$(SILENT)echo "[$(notdir $@)]"
+	$(SILENT)mkdir -p $(dir $@)
+	$(SILENT)$(CC) -c $(C_FLAGS) -o $@ $(filter-out %.h, $^) $(DEPENDENCY_PARAMS)$(patsubst %.o, %.d, $@)
 
 clean:
 	rm -r $(OUT_DIR)
