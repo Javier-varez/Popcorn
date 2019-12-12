@@ -1,6 +1,6 @@
 #include "stdint.h"
 
-#define TASK_STACK_SIZE     1024
+#define TASK_STACK_SIZE     256
 #define MAX_TASK_NAME       10
 
 typedef void (*task_func)();
@@ -21,4 +21,5 @@ enum PriorityLevel
 };
 
 void CreateTask(task_func func, uintptr_t arg, enum PriorityLevel priority, char* name);
+void Sleep(uint32_t ticks);
 void StartOS();

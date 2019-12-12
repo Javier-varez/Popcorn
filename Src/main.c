@@ -24,7 +24,7 @@ static void gpio_task(struct TaskArgs* args)
 
 	while (1)
 	{
-		HAL_Delay(args->delay);
+		Sleep(args->delay);
 		HAL_GPIO_TogglePin(args->bank, args->pin);
 	}
 }
@@ -78,7 +78,9 @@ void InitTask(void *args)
 	CreateTask(gpio_task, (uintptr_t)&args_task_1, TASK_PRIO_0, "GPIOC_13");
 	CreateTask(gpio_task, (uintptr_t)&args_task_2, TASK_PRIO_0, "GPIOA_0");
 
-	while(1);
+	while(1) {
+		Sleep(10000);
+	}
 }
 
 int main()
