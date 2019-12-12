@@ -158,7 +158,7 @@ void CreateTask_SVC_Handler(task_func func, uintptr_t arg, enum PriorityLevel pr
 	tcb->func = func;
 	tcb->state = TASK_RUNNABLE;
 	strncpy(tcb->name, name, MAX_TASK_NAME);
-	LinkedList_AddElement(&scheduler.task_list, &tcb->list);
+	LinkedList_AddEntry(scheduler.task_list, tcb, list);
 
 	return;
 }
@@ -220,7 +220,7 @@ void Sleep_SVC_Handler(uint32_t ticks)
 	event->task = tcb;
 
 	// Add event to list
-	LinkedList_AddElement(&scheduler.event_list, &event->list);
+	LinkedList_AddEntry(scheduler.event_list, event, list);
 
     // Send task to sleep
 	tcb->state = TASK_SLEEP;
@@ -243,7 +243,7 @@ void SchedulerTrigger()
 		if (ticks >= event->requested_wakeup_timestamp)
 		{
 			event->task->state = TASK_RUNNABLE;
-			LinkedList_RemoveElement(&scheduler.event_list, &event->list);
+			LinkedList_RemoveEntry(scheduler.event_list, event, list);
 			OsFree(event);
 		}
 	}
