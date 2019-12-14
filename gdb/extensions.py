@@ -10,11 +10,17 @@ class TCBPrettyPrinter(object):
     def to_string(self):
         return ("struct task_control_block:\n"
                 "\tName:\t\t%s\n"
+                "\tFunction:\t%s\n"
                 "\tPriority:\t%s\n"
-                "\tStack ptr:\t0x%08x" %
+                "\tState:\t\t%s\n"
+                "\tStack ptr:\t0x%08x\n"
+                "\tArgument ptr:\t0x%08x\n" %
                 (self.val["name"].string(),
+                 self.val["func"],
                  self.val["priority"],
-                 self.val["stack_ptr"]))
+                 self.val["state"],
+                 self.val["stack_ptr"],
+                 self.val["arg"]))
 
 class TaskEventPrettyPrinter(object):
     """Print 'task_event'"""
@@ -62,7 +68,7 @@ class LinkedListParser(gdb.Command):
         ll_p = head
         while ll_p != 0:
             element = ll_p.cast(gdb.lookup_type("uint8_t").pointer()) - offset
-            print("Found element at address 0x%08x" % element)
+            print("Found element at address 0x%08x, printing:" % element)
             gdb.execute("p *(%s)0x%x" % (type.pointer(), element))
             ll_p = ll_p.dereference()["next"]
 

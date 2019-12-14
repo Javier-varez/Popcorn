@@ -21,5 +21,6 @@ enum PriorityLevel
 };
 
 void CreateTask(task_func func, uintptr_t arg, enum PriorityLevel priority, char* name);
+void DestroyTask();
 void Sleep(uint32_t ticks);
 void StartOS();

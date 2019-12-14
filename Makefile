@@ -3,6 +3,7 @@ CC := arm-none-eabi-gcc
 CXX := arm-none-eabi-g++
 AR := arm-none-eabi-ar
 SIZE := arm-none-eabi-size
+GDB_PY:= arm-none-eabi-gdb-py
 
 STM32_CUBE_DIR := $(STM32CUBEF1_DIR)
 LIB_OUT_DIR := build/lib
@@ -30,6 +31,7 @@ C_FLAGS := \
 	$(addprefix -I, $(C_INCLUDE_DIRS)) \
 	-DSTM32F103xB $(CPU_C_FLAGS) \
 	-g3 -Os \
+	-Wall -Werror \
 	-ffunction-sections \
 	-fdata-sections \
 	-Wl,--gc-sections
@@ -92,7 +94,12 @@ $(OUT_DIR)/%.o: %.s
 	$(SILENT)$(CC) -c $(C_FLAGS) -o $@ $(filter-out %.h, $^) $(DEPENDENCY_PARAMS)$(patsubst %.o, %.d, $@)
 
 clean:
-	rm -r $(OUT_DIR)
+	$(SILENT)echo "Removing build directory"
+	$(SILENT)rm -r $(OUT_DIR)
 .PHONY: clean
+
+debug: $(TARGET)
+	$(SILENT)$(GDB_PY) $^
+.PHONY: debug
 
 -include $(patsubst %.o, %.d, $(OBJECTS))
