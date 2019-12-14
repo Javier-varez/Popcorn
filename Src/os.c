@@ -28,12 +28,12 @@ enum task_state
 struct task_control_block
 {
     uintptr_t                   stack_ptr;
-    enum PriorityLevel          priority;
     uintptr_t                   arg;
     task_func                   func;
+	LinkedList_t				list;
+    enum PriorityLevel          priority;
 	enum task_state             state;
     char                        name[MAX_TASK_NAME];
-	LinkedList_t				list;
 };
 
 struct task_event
