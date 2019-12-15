@@ -2,24 +2,26 @@ LOCAL_DIR := $(call current-dir)
 
 CC := gcc
 CXX := g++
-LD := gcc
 
-include $(CLEAR_VARS)
-LOCAL_CROSS_COMPILE := arm-none-eabi-
-LOCAL_NAME := stm32f1_fw.elf
-LOCAL_CFLAGS := \
+GLOBAL_CFLAGS := \
 	-mthumb \
 	-mcpu=cortex-m3 \
 	-DSTM32F103xB \
 	-Os \
 	-g3 \
-	-I$(LOCAL_DIR)/Inc \
-	-I$(LOCAL_DIR)/STM32CubeF1/Drivers/CMSIS/Core/Include \
-	-I$(LOCAL_DIR)/STM32CubeF1/Drivers/CMSIS/Device/ST/STM32F1xx/Include \
 	-Wall \
 	-Werror \
 	-ffunction-sections \
 	-fdata-sections
+
+include $(CLEAR_VARS)
+LOCAL_CROSS_COMPILE := arm-none-eabi-
+LOCAL_NAME := stm32f1_fw.elf
+LOCAL_CFLAGS := \
+	$(GLOBAL_CFLAGS) \
+	-I$(LOCAL_DIR)/Inc \
+	-I$(LOCAL_DIR)/STM32CubeF1/Drivers/CMSIS/Core/Include \
+	-I$(LOCAL_DIR)/STM32CubeF1/Drivers/CMSIS/Device/ST/STM32F1xx/Include
 LOCAL_CXXFLAGS := \
 	$(LOCAL_CFLAGS) \
 	-fno-exceptions \
@@ -40,19 +42,11 @@ include $(CLEAR_VARS)
 LOCAL_CROSS_COMPILE := arm-none-eabi-
 LOCAL_NAME := stm32cubef1
 LOCAL_CFLAGS := \
-	-mthumb \
-	-mcpu=cortex-m3 \
-	-DSTM32F103xB \
-	-Os \
-	-g3 \
+	$(GLOBAL_CFLAGS) \
 	-I$(LOCAL_DIR)/Inc \
 	-I$(LOCAL_DIR)/STM32CubeF1/Drivers/CMSIS/Core/Include \
 	-I$(LOCAL_DIR)/STM32CubeF1/Drivers/CMSIS/Device/ST/STM32F1xx/Include \
-	-I$(LOCAL_DIR)/STM32CubeF1/Drivers/STM32F1xx_HAL_Driver/Inc \
-	-Wall \
-	-Werror \
-	-ffunction-sections \
-	-fdata-sections
+	-I$(LOCAL_DIR)/STM32CubeF1/Drivers/STM32F1xx_HAL_Driver/Inc
 LOCAL_ARFLAGS := -rcs
 LOCAL_SRC := \
 	$(filter-out %_template.c, $(wildcard $(LOCAL_DIR)/STM32CubeF1/Drivers/STM32F1xx_HAL_Driver/Src/*.c))
