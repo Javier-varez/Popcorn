@@ -19,9 +19,7 @@ LOCAL_CROSS_COMPILE := arm-none-eabi-
 LOCAL_NAME := stm32f1_fw.elf
 LOCAL_CFLAGS := \
 	$(GLOBAL_CFLAGS) \
-	-I$(LOCAL_DIR)/Inc \
-	-I$(LOCAL_DIR)/STM32CubeF1/Drivers/CMSIS/Core/Include \
-	-I$(LOCAL_DIR)/STM32CubeF1/Drivers/CMSIS/Device/ST/STM32F1xx/Include
+	-I$(LOCAL_DIR)/Inc
 LOCAL_CXXFLAGS := \
 	$(LOCAL_CFLAGS) \
 	-fno-exceptions \
