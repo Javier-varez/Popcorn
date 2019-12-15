@@ -9,6 +9,9 @@ build-elf:
     script:
         - time make -j
     artifacts:
-        paths: ["build/stm32f1_fw.elf", "build/stm32f1_fw.elf.map"]
+        paths: ["build/targets/stm32f1_fw.elf", "build/targets/stm32f1_fw.elf.map"]
         expire_in: 1 week
         name: "stm32f1_fw"
+
+variables:
+    GIT_SUBMODULE_STRATEGY: recursive
