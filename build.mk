@@ -50,6 +50,9 @@ LOCAL_CFLAGS := \
 LOCAL_ARFLAGS := -rcs
 LOCAL_SRC := \
 	$(filter-out %_template.c, $(wildcard $(LOCAL_DIR)/STM32CubeF1/Drivers/STM32F1xx_HAL_Driver/Src/*.c))
-LOCAL_EXPORTED_DIR := \
-	$(LOCAL_DIR)/STM32CubeF1/Drivers/STM32F1xx_HAL_Driver/Inc
+LOCAL_EXPORTED_DIRS := \
+	$(LOCAL_DIR)/STM32CubeF1/Drivers/STM32F1xx_HAL_Driver/Inc \
+	$(LOCAL_DIR)/STM32CubeF1/Drivers/CMSIS/Device/ST/STM32F1xx/Include \
+	$(LOCAL_DIR)/STM32CubeF1/Drivers/CMSIS/Core/Include
+
 include $(BUILD_STATIC_LIB)
