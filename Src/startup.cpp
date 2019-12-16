@@ -44,6 +44,10 @@ void Reset_Handler() {
     __attribute__((weak)) \
     __attribute__((noreturn)) \
     void name() { \
+        volatile int32_t exception_number; \
+        asm("mrs %[ipsr_reg], ipsr   \n" \
+             : [ipsr_reg] "=r" (exception_number)); \
+        exception_number -= 16; \
         asm("bkpt #0"); \
         while(true); \
     }

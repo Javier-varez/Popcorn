@@ -356,7 +356,7 @@ void StartOS()
     SVC_CALL(START_OS_SVC);
 }
 
-void CreateTask(task_func func, uintptr_t arg, enum PriorityLevel priority, char* name)
+void CreateTask(task_func func, uintptr_t arg, enum PriorityLevel priority, const char* name)
 {
     SVC_CALL(CREATE_TASK_SVC);
 }

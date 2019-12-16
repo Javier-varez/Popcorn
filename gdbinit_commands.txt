@@ -5,4 +5,5 @@ monitor reset halt
 set step-mode on
 tui enable
 layout asm
+layout regs
 macro define offsetof(t, f) &((t *) 0)->f
