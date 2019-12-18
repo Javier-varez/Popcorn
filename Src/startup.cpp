@@ -1,6 +1,9 @@
 #include <algorithm>
 #include <cstdint>
 
+std::uint32_t* const CORE_DEBUG_DHCSR =
+    reinterpret_cast<std::uint32_t*>(0xE000EDF0UL);
+
 extern "C"
 void SystemInit (void);
 
@@ -48,7 +51,9 @@ void Reset_Handler() {
         asm("mrs %[ipsr_reg], ipsr   \n" \
              : [ipsr_reg] "=r" (exception_number)); \
         exception_number -= 16; \
-        asm("bkpt #0"); \
+        if (*CORE_DEBUG_DHCSR & (1 << 0)) { \
+            asm("bkpt #0"); \
+        } \
         while(true); \
     }
 
