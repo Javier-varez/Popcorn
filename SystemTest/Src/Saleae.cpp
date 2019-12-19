@@ -39,7 +39,7 @@ bool Saleae::ValidateResponse(std::string response) const
     return ack.compare("ACK") == 0;
 }
 
-std::uint32_t Saleae::GetNumSamples() const
+bool Saleae::GetNumSamples(std::uint32_t& samples) const
 {
     char rsp[1024];
     SendCommand("GET_NUM_SAMPLES", rsp, 1024);
@@ -48,9 +48,40 @@ std::uint32_t Saleae::GetNumSamples() const
     if (ValidateResponse(response))
     {
         std::string valStr = response.substr(0, response.find("\n"));
-        return std::stoi(valStr, 0, 10);
+        samples = std::stoi(valStr, 0, 10);
+        return true;
     }
-    return 0;
+    return false;
+}
+
+bool Saleae::SetNumSamples(std::uint32_t numSamples) const
+{
+    char rsp[1024];
+    char cmd[256];
+    std::snprintf(cmd, sizeof(cmd), "SET_NUM_SAMPLES, %u", numSamples);
+    SendCommand(cmd, rsp, sizeof(rsp));
+
+    std::string response(rsp);
+    if (ValidateResponse(response))
+    {
+        return true;
+    }
+    return false;
+}
+
+bool Saleae::SetSampleRate(std::uint32_t sampleRate) const
+{
+    char rsp[1024];
+    char cmd[256];
+    std::snprintf(cmd, sizeof(cmd), "SET_SAMPLE_RATE, %u, %u", sampleRate, sampleRate);
+    SendCommand(cmd, rsp, sizeof(rsp));
+
+    std::string response(rsp);
+    if (ValidateResponse(response))
+    {
+        return true;
+    }
+    return false;
 }
 
 void Saleae::SendCommand(const char cmd[], char response[], std::uint32_t rspLen) const

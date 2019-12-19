@@ -7,9 +7,11 @@ LOCAL_CFLAGS := \
 	-I$(LOCAL_DIR)/Inc
 LOCAL_CXXFLAGS := \
 	$(LOCAL_CFLAGS)
-LOCAL_LDFLAGS := \
-	-lstdc++
 LOCAL_SRC := \
 	$(wildcard $(LOCAL_DIR)/Src/*.c) \
 	$(wildcard $(LOCAL_DIR)/Src/*.cpp)
+# Set compilers and linker to g++
+CC := g++
+CXX := g++
+LD := g++
 include $(BUILD_BINARY)

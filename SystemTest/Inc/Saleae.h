@@ -8,7 +8,9 @@ class Saleae
 {
 public:
     Saleae(const char addr[], std::uint16_t port);
-    std::uint32_t GetNumSamples() const;
+    bool GetNumSamples(std::uint32_t &samples) const;
+    bool SetNumSamples(std::uint32_t numSamples) const;
+    bool SetSampleRate(std::uint32_t sampleRate) const;
 
 private:
     bool ValidateResponse(std::string response) const;
