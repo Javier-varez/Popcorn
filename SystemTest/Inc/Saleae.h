@@ -11,6 +11,9 @@ public:
     bool GetNumSamples(std::uint32_t &samples) const;
     bool SetNumSamples(std::uint32_t numSamples) const;
     bool SetSampleRate(std::uint32_t sampleRate) const;
+    bool SetCaptureSeconds(double seconds) const;
+    bool Capture() const;
+    bool ExportData(std::string filename) const;
 
 private:
     bool ValidateResponse(std::string response) const;

@@ -18,28 +18,34 @@ static bool FileExists(std::string filePath)
     return false;
 }
 
-static std::string FindExecutableInPath(std::string program, char* envp[])
+static std::string GetEnvironmentVariable(std::string envVar, char* envp[])
 {
+    envVar.append("=");
     while (*envp != NULL)
     {
-        if (std::strncmp("PATH=", *envp, std::strlen("PATH=")) == 0)
+        if (std::strncmp(envVar.c_str(), *envp, envVar.length()) == 0)
         {
             break;
         }
         envp++;
     }
 
-    if (*envp == NULL)
+    if (*envp == nullptr)
     {
         return "";
     }
+    std::string Value(*envp);
+    Value = Value.substr(Value.find("=") + 1);
+    return Value;
+}
 
+static std::string FindExecutableInPath(std::string program, char* envp[])
+{
     // Parse path
     std::vector<std::string> paths;
-    std::string Path(*envp);
+    std::string Path(GetEnvironmentVariable("PATH", envp));
 
-    Path = Path.substr(Path.find("=") + 1);
-    do 
+    do
     {
         auto nextColon = Path.find(":");
         std::string newPath = Path.substr(0, nextColon);
@@ -57,7 +63,7 @@ static std::string FindExecutableInPath(std::string program, char* envp[])
     }
 
     std::printf("Exec not found\n");
-    return Path;
+    return "";
 }
 
 static int Execute(
@@ -69,7 +75,7 @@ static int Execute(
     if (pid == 0)
     {
         // Child
-        int fd = open("/dev/null",O_WRONLY | O_CREAT, 0666);   // open the file /dev/null
+        int fd = open("/dev/null",O_WRONLY | O_CREAT, 0666);
         dup2(fd, 1);
         dup2(fd, 2);
         close(fd);
@@ -100,25 +106,35 @@ int main(int argc, char* argv[], char* envp[])
     sleep(1);
 
     Saleae saleae("127.0.0.1", 10429);
-    std::printf("Get samples\n");
-
-    std::uint32_t nSamples = 0; 
-    if (!saleae.SetNumSamples(1024))
-    {
-        printf("Error setting samples\n");
-        ExitHandler();
-    }
-    if (!saleae.GetNumSamples(nSamples))
-    {
-        printf("Error getting samples\n");
-        ExitHandler();
-    }
-    printf("nsamples: %d\n", nSamples);
 
     if (!saleae.SetSampleRate(24000000))
     {
         printf("Error setting sample rate\n");
         ExitHandler();
+    }
+    if (!saleae.SetCaptureSeconds(10.0))
+    {
+        printf("Error setting capture seconds\n");
+        ExitHandler();
+    }
+    saleae.Capture();
+
+    std::string pwd(GetEnvironmentVariable("PWD", envp));
+    printf("pwd %s\n", pwd.c_str());
+
+    pwd.append("/output.bin");
+    saleae.ExportData(pwd);
+
+    int binfile = open(pwd.c_str(), O_RDONLY);
+    uint8_t buf[2048];
+    int len = read(binfile, buf, 2048);
+    uint8_t* ptr = buf;
+    for (int i = 0; i < len / 9; i++)
+    {
+        uint64_t *timestamp_ptr = reinterpret_cast<uint64_t*>(ptr);
+        uint8_t* byte = ptr + sizeof(uint64_t);
+        printf("Sample #%d: timestamp %lu, val 0x%02x\n", i, *timestamp_ptr, *byte);
+        ptr += sizeof(uint64_t) + sizeof(uint8_t);
     }
 
     ExitHandler();

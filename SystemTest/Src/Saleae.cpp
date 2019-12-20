@@ -84,6 +84,58 @@ bool Saleae::SetSampleRate(std::uint32_t sampleRate) const
     return false;
 }
 
+bool Saleae::SetCaptureSeconds(double seconds) const
+{
+    char rsp[1024];
+    char cmd[256];
+    std::snprintf(cmd, sizeof(cmd), "SET_CAPTURE_SECONDS, %f", seconds);
+    SendCommand(cmd, rsp, sizeof(rsp));
+
+    std::string response(rsp);
+    if (ValidateResponse(response))
+    {
+        return true;
+    }
+    return false;
+}
+
+bool Saleae::Capture() const
+{
+    char rsp[1024];
+    SendCommand("CAPTURE", rsp, sizeof(rsp));
+
+    std::string response(rsp);
+    if (ValidateResponse(response))
+    {
+        return true;
+    }
+    return false;
+}
+
+bool Saleae::ExportData(std::string filename) const
+{
+    char rsp[1024];
+    char cmd[256];
+    snprintf(cmd, sizeof(cmd), 
+             "EXPORT_DATA2, "
+             "%s, "
+             "ALL_CHANNELS, "
+             "ALL_TIME, "
+             "BINARY, "
+             "ON_CHANGE, "
+             "NO_SHIFT, "
+             "8",
+             filename.c_str());
+    SendCommand(cmd, rsp, sizeof(rsp));
+
+    std::string response(rsp);
+    if (ValidateResponse(response))
+    {
+        return true;
+    }
+    return false;
+}
+
 void Saleae::SendCommand(const char cmd[], char response[], std::uint32_t rspLen) const
 {
     // strlen + 1 to include null string termination
