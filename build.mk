@@ -3,6 +3,8 @@ LOCAL_DIR := $(call current-dir)
 CC := gcc
 CXX := g++
 
+ARM_GCC_VERSION := 9.2.1
+
 GLOBAL_CFLAGS := \
 	-mthumb \
 	-mcpu=cortex-m3 \
@@ -13,6 +15,12 @@ GLOBAL_CFLAGS := \
 	-Werror \
 	-ffunction-sections \
 	-fdata-sections
+
+INSTALLED_ARM_GCC_VERSION := \
+	$(strip $(shell arm-none-eabi-gcc -dumpversion))
+ifneq ($(INSTALLED_ARM_GCC_VERSION), $(ARM_GCC_VERSION))
+$(error arm-none-eabi-gcc doesn't match version $(ARM_GCC_VERSION). Detected: $(INSTALLED_ARM_GCC_VERSION))
+endif
 
 include $(CLEAR_VARS)
 LOCAL_CROSS_COMPILE := arm-none-eabi-
