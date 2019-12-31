@@ -7,6 +7,10 @@
 #include <unistd.h>
 #include <netdb.h>
 #include <iostream>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <cmath>
 
 Saleae::Saleae(const char addr[], std::uint16_t port)
 {
@@ -31,6 +35,8 @@ Saleae::Saleae(const char addr[], std::uint16_t port)
         std::printf("Connection failed\n");
         return;
     }
+
+    GetSampleRate(m_sample_rate);
 }
 
 bool Saleae::ValidateResponse(std::string response) const
@@ -69,7 +75,22 @@ bool Saleae::SetNumSamples(std::uint32_t numSamples) const
     return false;
 }
 
-bool Saleae::SetSampleRate(std::uint32_t sampleRate) const
+bool Saleae::GetSampleRate(std::uint32_t& sampleRate) const
+{
+    char rsp[1024];
+    SendCommand("GET_SAMPLE_RATE", rsp, 1024);
+
+    std::string response(rsp);
+    if (ValidateResponse(response))
+    {
+        std::string valStr = response.substr(0, response.find("\n"));
+        sampleRate = std::stoi(valStr, 0, 10);
+        return true;
+    }
+    return false;
+}
+
+bool Saleae::SetSampleRate(std::uint32_t sampleRate)
 {
     char rsp[1024];
     char cmd[256];
@@ -79,6 +100,7 @@ bool Saleae::SetSampleRate(std::uint32_t sampleRate) const
     std::string response(rsp);
     if (ValidateResponse(response))
     {
+        m_sample_rate = sampleRate;
         return true;
     }
     return false;
@@ -112,7 +134,7 @@ bool Saleae::Capture() const
     return false;
 }
 
-bool Saleae::ExportData(std::string filename) const
+bool Saleae::ExportData(const std::string& filename) const
 {
     char rsp[1024];
     char cmd[256];
@@ -134,6 +156,81 @@ bool Saleae::ExportData(std::string filename) const
         return true;
     }
     return false;
+}
+
+std::vector<Saleae::SampleData> Saleae::ParseData(const std::string& filename) const
+{
+    constexpr std::size_t chunck_size = 2048 * sizeof(Saleae::SampleData);
+    uint8_t buf[chunck_size];
+
+    std::vector<Saleae::SampleData> samples;
+
+    int binfile = open(filename.c_str(), O_RDONLY);
+    int len = 0;
+    do {
+        len = read(binfile, buf, chunck_size);
+        Saleae::SampleData *sample_ptr = reinterpret_cast<Saleae::SampleData*>(buf);
+        for (unsigned int i = 0; i < len / sizeof(Saleae::SampleData); i++)
+        {
+            samples.push_back(sample_ptr[i]);
+        }
+    } while (len != 0);
+
+    return samples;
+}
+
+template<class T>
+std::pair<double, double> CalculateMeanAndStdDev(const std::vector<T>& dataVector)
+{
+    double mean = 0.0;
+    // Compute mean
+    for (auto data: dataVector)
+    {
+        mean += data;
+    }
+    mean /= dataVector.size();
+
+    double stddev = 0.0;
+    // Compute stddev
+    for (auto data: dataVector)
+    {
+        stddev += std::pow(data - mean, 2);
+    }
+    stddev /= dataVector.size() - 1;
+    stddev = std::sqrt(stddev);
+
+    return std::make_pair(mean, stddev);
+}
+
+std::pair<double, double> Saleae::GetFrequency(const std::vector<Saleae::SampleData>& samples, const Saleae::Channels channel) const
+{
+    uint8_t prevState = 0xFF;
+    uint64_t lastTimestamp = 0x0000000000000000;
+    std::vector<double> frequencyData;
+
+    for (auto sample: samples)
+    {
+        uint8_t currentState = sample.data & channel;
+
+        if (sample.timestamp == 0x00)
+        {
+            prevState = sample.data & channel;
+            continue;
+        }
+        else if (currentState != prevState)
+        {
+            uint64_t currentTimestamp = sample.timestamp;
+            if (lastTimestamp != 0)
+            {
+                uint64_t currentPeriod = currentTimestamp - lastTimestamp;
+                frequencyData.push_back(static_cast<double>(m_sample_rate) / currentPeriod);
+            }
+            prevState = currentState;
+            lastTimestamp = currentTimestamp;
+        }
+    }
+
+    return CalculateMeanAndStdDev(frequencyData);
 }
 
 void Saleae::SendCommand(const char cmd[], char response[], std::uint32_t rspLen) const

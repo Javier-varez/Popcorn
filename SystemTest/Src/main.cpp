@@ -52,6 +52,7 @@ static std::string FindExecutableInPath(std::string program, char* envp[])
         paths.push_back(newPath);
         Path = Path.substr(nextColon + 1);
     } while(Path.find(":") != Path.npos);
+    paths.push_back(Path);
 
     for (std::string path: paths)
     {
@@ -120,22 +121,14 @@ int main(int argc, char* argv[], char* envp[])
     saleae.Capture();
 
     std::string pwd(GetEnvironmentVariable("PWD", envp));
-    printf("pwd %s\n", pwd.c_str());
 
     pwd.append("/output.bin");
     saleae.ExportData(pwd);
-
-    int binfile = open(pwd.c_str(), O_RDONLY);
-    uint8_t buf[2048];
-    int len = read(binfile, buf, 2048);
-    uint8_t* ptr = buf;
-    for (int i = 0; i < len / 9; i++)
-    {
-        uint64_t *timestamp_ptr = reinterpret_cast<uint64_t*>(ptr);
-        uint8_t* byte = ptr + sizeof(uint64_t);
-        printf("Sample #%d: timestamp %lu, val 0x%02x\n", i, *timestamp_ptr, *byte);
-        ptr += sizeof(uint64_t) + sizeof(uint8_t);
-    }
+    auto samples = saleae.ParseData(pwd);
+    std::pair<double, double> freq = saleae.GetFrequency(samples, Saleae::Channel_0);
+    printf("Channel 0 freq = %f, std_dev = %f\n", freq.first, freq.second);
+    freq = saleae.GetFrequency(samples, Saleae::Channel_1);
+    printf("Channel 1 freq = %f, std_dev = %f\n", freq.first, freq.second);
 
     ExitHandler();
     return 0;
