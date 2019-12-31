@@ -92,10 +92,29 @@ static int Execute(
 
 static int childPid = 0;
 
-static void ExitHandler()
+static void ExitHandler(int errCode = 0)
 {
     kill(childPid, SIGTERM);
-    exit(1);
+    exit(errCode);
+}
+
+static bool ValidateFrequency(std::pair<double, double> freq, double target)
+{
+    double tolerance = 0.001;
+
+    // Validate mean
+    if ((freq.first > target + tolerance) ||
+        (freq.first < target - tolerance))
+    {
+        return false;
+    }
+
+    // Validate stddev
+    if (freq.second > tolerance)
+    {
+        return false;
+    }
+    return true;
 }
 
 int main(int argc, char* argv[], char* envp[])
@@ -111,12 +130,12 @@ int main(int argc, char* argv[], char* envp[])
     if (!saleae.SetSampleRate(24000000))
     {
         printf("Error setting sample rate\n");
-        ExitHandler();
+        ExitHandler(-1);
     }
     if (!saleae.SetCaptureSeconds(10.0))
     {
         printf("Error setting capture seconds\n");
-        ExitHandler();
+        ExitHandler(-1);
     }
     saleae.Capture();
 
@@ -125,11 +144,25 @@ int main(int argc, char* argv[], char* envp[])
     pwd.append("/output.bin");
     saleae.ExportData(pwd);
     auto samples = saleae.ParseData(pwd);
+
+    bool fail = false;
+
     std::pair<double, double> freq = saleae.GetFrequency(samples, Saleae::Channel_0);
     printf("Channel 0 freq = %f, std_dev = %f\n", freq.first, freq.second);
+    if (!ValidateFrequency(freq, 0.66666666))
+    {
+        printf("Failed validation for channel 0\n");
+        fail = true;
+    }
+
     freq = saleae.GetFrequency(samples, Saleae::Channel_1);
     printf("Channel 1 freq = %f, std_dev = %f\n", freq.first, freq.second);
+    if (!ValidateFrequency(freq, 1.0))
+    {
+        printf("Failed validation for channel 1\n");
+        fail = true;
+    }
 
-    ExitHandler();
+    ExitHandler(fail ? -1 : 0);
     return 0;
 }
