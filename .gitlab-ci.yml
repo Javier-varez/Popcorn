@@ -1,10 +1,12 @@
 stages:
     - build
+    - test
 
 build-elf:
     image: javiervarez/ate_builder:latest
     tags:
         - arm-none-eabi
+        - docker
     stage: build
     script:
         - time make -j
@@ -12,6 +14,16 @@ build-elf:
         paths: ["build/targets/stm32f1_fw.elf", "build/targets/stm32f1_fw.elf.map"]
         expire_in: 1 week
         name: "stm32f1_fw"
+
+system-test:
+    tags:
+        - arm-none-eabi
+        - Logic
+        - openocd
+        - x86_64
+    stage: test
+    script:
+        - ./ci/run_system_test.sh
 
 variables:
     GIT_SUBMODULE_STRATEGY: recursive

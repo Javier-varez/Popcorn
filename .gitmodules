@@ -3,4 +3,4 @@
 	url = https://github.com/STMicroelectronics/STM32CubeF1.git
 [submodule "buildsystem"]
 	path = buildsystem
-	url = ../buildsystem.git
+	url = http://gitlab.allthingsembedded.net/Javier_varez/buildsystem.git
