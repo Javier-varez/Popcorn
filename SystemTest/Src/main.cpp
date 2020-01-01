@@ -67,34 +67,34 @@ static std::string FindExecutableInPath(std::string program, char* envp[])
     return "";
 }
 
-static int Execute(
-    const char* filename,
-    char* const argv[],
-    char* const envp[])
-{
-    int pid = fork();
-    if (pid == 0)
-    {
-        // Child
-        int fd = open("/dev/null",O_WRONLY | O_CREAT, 0666);
-        dup2(fd, 1);
-        dup2(fd, 2);
-        close(fd);
-        execve(filename, argv, envp);
-        return 0;
-    }
-    else
-    {
-        // Parent
-        return pid;
-    }
-}
+//static int Execute(
+//    const char* filename,
+//    char* const argv[],
+//    char* const envp[])
+//{
+//    int pid = fork();
+//    if (pid == 0)
+//    {
+//        // Child
+//        int fd = open("/dev/null",O_WRONLY | O_CREAT, 0666);
+//        dup2(fd, 1);
+//        dup2(fd, 2);
+//        close(fd);
+//        execve(filename, argv, envp);
+//        return 0;
+//    }
+//    else
+//    {
+//        // Parent
+//        return pid;
+//    }
+//}
 
-static int childPid = 0;
+//static int childPid = 0;
 
 static void ExitHandler(int errCode = 0)
 {
-    kill(childPid, SIGTERM);
+    //kill(childPid, SIGTERM);
     exit(errCode);
 }
 
@@ -121,7 +121,7 @@ int main(int argc, char* argv[], char* envp[])
 {
     const char filename[] = "Logic";
     std::string programPath = FindExecutableInPath(filename, envp);
-    childPid = Execute(programPath.c_str(), argv, envp);
+    //childPid = Execute(programPath.c_str(), argv, envp);
 
     sleep(1);
 
