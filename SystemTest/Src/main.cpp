@@ -162,7 +162,8 @@ int main(int argc, char* argv[], char* envp[])
     }
     saleae.Capture();
 
-    std::string outputDir("/shared/Logic/output.bin");
+    std::string outputDir(GetEnvironmentVariable("PWD", envp));
+    outputDir.append("/output.bin");
 
     if (!saleae.ExportData(outputDir))
     {
