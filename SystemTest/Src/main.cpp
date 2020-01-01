@@ -139,9 +139,15 @@ int main(int argc, char* argv[], char* envp[])
     }
     saleae.Capture();
 
-    std::string pwd(GetEnvironmentVariable("PWD", envp));
+    char cwd[1024];
+    if (getcwd(cwd, sizeof(cwd)) == NULL) {
+        printf("couldn't get cwd\n");
+        ExitHandler(-1);
+    }
+    std::string pwd(cwd);
 
     pwd.append("/output.bin");
+    printf("path is %s\n", pwd.c_str());
     saleae.ExportData(pwd);
     auto samples = saleae.ParseData(pwd);
 
