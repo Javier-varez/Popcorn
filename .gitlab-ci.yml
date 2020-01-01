@@ -11,9 +11,18 @@ build-elf:
     script:
         - time make -j
     artifacts:
-        paths: ["build/targets/stm32f1_fw.elf", "build/targets/stm32f1_fw.elf.map"]
+        paths: ["build"]
         expire_in: 1 week
         name: "stm32f1_fw"
+
+unit-test:
+    image: javiervarez/ate_builder:latest
+    tags:
+        - arm-none-eabi
+        - docker
+    stage: test
+    script:
+        - ./ci/run_unit_test.sh
 
 system-test:
     tags:

@@ -76,7 +76,7 @@ static int Execute(
    if (pid == 0)
    {
        // Child
-       int fd = open("/dev/null",O_WRONLY | O_CREAT, 0666);
+       int fd = open("/dev/null", O_WRONLY | O_CREAT, 0666);
        dup2(fd, 1);
        dup2(fd, 2);
        close(fd);
