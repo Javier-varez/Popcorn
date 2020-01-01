@@ -11,6 +11,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <cmath>
+#include <signal.h>
 
 Saleae::Saleae(const char addr[], std::uint16_t port)
 {
@@ -41,6 +42,8 @@ Saleae::Saleae(const char addr[], std::uint16_t port)
 
 bool Saleae::ValidateResponse(std::string response) const
 {
+    if (response.length() == 0) return false;
+
     std::string ack = response.substr(response.find_last_of("A"));
     return ack.compare("ACK") == 0;
 }
@@ -166,6 +169,8 @@ std::vector<Saleae::SampleData> Saleae::ParseData(const std::string& filename) c
     std::vector<Saleae::SampleData> samples;
 
     int binfile = open(filename.c_str(), O_RDONLY);
+    if (binfile < 0) return samples;
+
     int len = 0;
     do {
         len = read(binfile, buf, chunck_size);
@@ -236,8 +241,10 @@ std::pair<double, double> Saleae::GetFrequency(const std::vector<Saleae::SampleD
 void Saleae::SendCommand(const char cmd[], char response[], std::uint32_t rspLen) const
 {
     // strlen + 1 to include null string termination
-    send(fd, cmd, std::strlen(cmd) + 1, 0);
+    send(fd, cmd, std::strlen(cmd) + 1, MSG_NOSIGNAL);
     ssize_t len = recv(fd, response, rspLen, 0);
     if (len >= 0)
-        response[len] = '\0';    
+        response[len] = '\0';
+    else
+        response[0] = '\0';
 }

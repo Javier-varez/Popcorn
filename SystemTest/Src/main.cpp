@@ -67,34 +67,36 @@ static std::string FindExecutableInPath(std::string program, char* envp[])
     return "";
 }
 
-//static int Execute(
-//    const char* filename,
-//    char* const argv[],
-//    char* const envp[])
-//{
-//    int pid = fork();
-//    if (pid == 0)
-//    {
-//        // Child
-//        int fd = open("/dev/null",O_WRONLY | O_CREAT, 0666);
-//        dup2(fd, 1);
-//        dup2(fd, 2);
-//        close(fd);
-//        execve(filename, argv, envp);
-//        return 0;
-//    }
-//    else
-//    {
-//        // Parent
-//        return pid;
-//    }
-//}
+static int Execute(
+   const char* filename,
+   const char* const argv[],
+   const char* const envp[])
+{
+   int pid = fork();
+   if (pid == 0)
+   {
+       // Child
+       int fd = open("/dev/null",O_WRONLY | O_CREAT, 0666);
+       dup2(fd, 1);
+       dup2(fd, 2);
+       close(fd);
+       execve(filename, const_cast<char* const*>(argv), const_cast<char* const*>(envp));
+       return 0;
+   }
+   else
+   {
+       // Parent
+       return pid;
+   }
+}
 
-//static int childPid = 0;
+static int LogicPID = 0;
+static int XvfbPID = 0;
 
 static void ExitHandler(int errCode = 0)
 {
-    //kill(childPid, SIGTERM);
+    kill(LogicPID, SIGTERM);
+    kill(XvfbPID, SIGTERM);
     exit(errCode);
 }
 
@@ -119,11 +121,32 @@ static bool ValidateFrequency(std::pair<double, double> freq, double target)
 
 int main(int argc, char* argv[], char* envp[])
 {
-    const char filename[] = "Logic";
-    std::string programPath = FindExecutableInPath(filename, envp);
-    //childPid = Execute(programPath.c_str(), argv, envp);
+    const char* const Env[] = {
+        "DISPLAY=:99",
+        nullptr
+    };
 
-    sleep(1);
+    std::string LogicPath = FindExecutableInPath("Logic", envp);
+    std::string XvfbPath = FindExecutableInPath("Xvfb", envp);
+
+    const char* const XvfbArgs[] = {
+        "Xvfb",
+        ":99",
+        "-screen",
+        "0",
+        "1024x768x24",
+        nullptr
+    };
+
+    XvfbPID = Execute(XvfbPath.c_str(), XvfbArgs, Env);
+
+    const char* const LogicArgs[] = {
+        "Logic",
+        nullptr
+    };
+
+    LogicPID = Execute(LogicPath.c_str(), LogicArgs, Env);
+    sleep(5);
 
     Saleae saleae("127.0.0.1", 10429);
 
@@ -141,7 +164,11 @@ int main(int argc, char* argv[], char* envp[])
 
     std::string outputDir("/shared/Logic/output.bin");
 
-    saleae.ExportData(outputDir);
+    if (!saleae.ExportData(outputDir))
+    {
+        printf("Error when exporting data\n");
+        ExitHandler(-1);
+    }
     auto samples = saleae.ParseData(outputDir);
 
     bool fail = false;
