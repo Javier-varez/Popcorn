@@ -6,7 +6,8 @@ LOCAL_CFLAGS := \
 	-Wall -Werror \
 	-I$(LOCAL_DIR)/Inc
 LOCAL_CXXFLAGS := \
-	$(LOCAL_CFLAGS)
+	$(LOCAL_CFLAGS) \
+	-std=c++17
 LOCAL_SRC := \
 	$(wildcard $(LOCAL_DIR)/Src/*.c) \
 	$(wildcard $(LOCAL_DIR)/Src/*.cpp)
