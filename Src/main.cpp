@@ -8,8 +8,10 @@ struct TaskArgs
     uint32_t        delay;
 };
 
-static void gpio_task(struct TaskArgs* args)
+static void gpio_task(void* arg)
 {
+    struct TaskArgs* args = reinterpret_cast<struct TaskArgs*>(arg);
+    
     if (args->bank == GPIOA)
         __HAL_RCC_GPIOA_CLK_ENABLE();
     else if (args->bank == GPIOC)
@@ -24,7 +26,7 @@ static void gpio_task(struct TaskArgs* args)
 
     while (1)
     {
-        Sleep(args->delay);
+        OS::Scheduler::Sleep(args->delay);
         HAL_GPIO_TogglePin(args->bank, args->pin);
     }
 }
@@ -75,8 +77,8 @@ void InitTask(void *args)
         1500
     };
 
-    CreateTask(gpio_task, (uintptr_t)&args_task_1, TASK_PRIO_0, "GPIOC_13");
-    CreateTask(gpio_task, (uintptr_t)&args_task_2, TASK_PRIO_0, "GPIOA_0");
+    OS::Scheduler::CreateTask(gpio_task, (uintptr_t)&args_task_1, OS::Scheduler::TASK_PRIO_0, "GPIOC_13");
+    OS::Scheduler::CreateTask(gpio_task, (uintptr_t)&args_task_2, OS::Scheduler::TASK_PRIO_0, "GPIOA_0");
 }
 
 int main()
@@ -84,7 +86,7 @@ int main()
     HAL_Init();
     ConfigureClk();
 
-    CreateTask(InitTask, (uintptr_t)NULL, TASK_PRIO_0, "Init task");
-    StartOS();
+    OS::Scheduler::CreateTask(InitTask, (uintptr_t)NULL, OS::Scheduler::TASK_PRIO_0, "Init task");
+    OS::Scheduler::StartOS();
     return 0;
 }

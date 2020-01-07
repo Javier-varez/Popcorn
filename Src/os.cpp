@@ -1,9 +1,11 @@
 #include "os.h"
 #include "stm32f1xx_hal.h"
-#include <stddef.h>
-#include <string.h>
 #include "memory_management.h"
 #include "linked_list.h"
+#include "mutex.h"
+
+#include <cstddef>
+#include <cstring>
 
 #define __NAKED                     __attribute__((naked))
 
@@ -27,20 +29,20 @@ enum task_state
 
 struct task_control_block
 {
-    uintptr_t                   stack_ptr;
-    uintptr_t                   arg;
-    task_func                   func;
-    uintptr_t                   stack_base;
-    LinkedList_t                list;
-    enum PriorityLevel          priority;
-    enum task_state             state;
-    char                        name[MAX_TASK_NAME];
+    uintptr_t                            stack_ptr;
+    uintptr_t                            arg;
+    task_func                            func;
+    uintptr_t                            stack_base;
+    LinkedList_t                         list;
+    enum OS::Scheduler::PriorityLevel    priority;
+    enum task_state                      state;
+    char                                 name[MAX_TASK_NAME];
 };
 
 struct task_event
 {
     struct task_control_block*  task;
-    uint32_t                    requested_wakeup_timestamp;
+    std::uint32_t                    requested_wakeup_timestamp;
     LinkedList_t                list;
 };
 
@@ -60,27 +62,27 @@ static struct Scheduler scheduler =
 
 struct auto_task_stack_frame
 {
-    uint32_t r0;
-    uint32_t r1;
-    uint32_t r2;
-    uint32_t r3;
-    uint32_t r12;
-    uint32_t lr;
-    uint32_t pc;
-    uint32_t xpsr;
+    std::uint32_t r0;
+    std::uint32_t r1;
+    std::uint32_t r2;
+    std::uint32_t r3;
+    std::uint32_t r12;
+    std::uint32_t lr;
+    std::uint32_t pc;
+    std::uint32_t xpsr;
 };
 
 struct manual_task_stack_frame
 {
-    uint32_t r4;
-    uint32_t r5;
-    uint32_t r6;
-    uint32_t r7;
-    uint32_t r8;
-    uint32_t r9;
-    uint32_t r10;
-    uint32_t r11;
-    uint32_t lr;
+    std::uint32_t r4;
+    std::uint32_t r5;
+    std::uint32_t r6;
+    std::uint32_t r7;
+    std::uint32_t r8;
+    std::uint32_t r9;
+    std::uint32_t r10;
+    std::uint32_t r11;
+    std::uint32_t lr;
 };
 
 struct task_stack_frame
@@ -93,7 +95,7 @@ static void* AllocateTaskStack(struct task_control_block *tcb, size_t size)
 {
     void* task_stack_top = NULL;
 
-    uint8_t* stack = OsMalloc(size);
+    std::uint8_t* stack = reinterpret_cast<std::uint8_t*>(OsMalloc(size));
     if (stack != NULL)
     {
         tcb->stack_base = (uintptr_t)&stack[0];
@@ -103,7 +105,7 @@ static void* AllocateTaskStack(struct task_control_block *tcb, size_t size)
     return task_stack_top;
 }
 
-static void* AllocateTaskStackFrame(void* stack_ptr)
+static std::uint8_t* AllocateTaskStackFrame(std::uint8_t* stack_ptr)
 {
     if (stack_ptr == NULL)
         return NULL;
@@ -112,13 +114,13 @@ static void* AllocateTaskStackFrame(void* stack_ptr)
         (uintptr_t)(stack_ptr - sizeof(struct auto_task_stack_frame));
 
     // Align on 8 byte boundary
-    return (void*)(retval & 0xfffffff8);
+    return reinterpret_cast<std::uint8_t*>(retval & 0xfffffff8);
 }
 
-static void* AllocateCompleteTaskStackFrame(void* stack_ptr)
+static struct task_stack_frame* AllocateCompleteTaskStackFrame(std::uint8_t* stack_ptr)
 {
-    void* ptr = AllocateTaskStackFrame(stack_ptr);
-    return ptr - sizeof(struct manual_task_stack_frame);
+    std::uint8_t* ptr = AllocateTaskStackFrame(stack_ptr);
+    return reinterpret_cast<struct task_stack_frame*>(ptr - sizeof(struct manual_task_stack_frame));
 }
 
 static void InitializeTask(
@@ -126,14 +128,14 @@ static void InitializeTask(
     task_func func,
     uintptr_t arg)
 {
-    stack_frame_ptr->autosave.pc = (uint32_t)func;
+    stack_frame_ptr->autosave.pc = reinterpret_cast<std::uint32_t>(func);
     stack_frame_ptr->autosave.r0 = arg;
     stack_frame_ptr->autosave.xpsr = XPSR_INIT_VALUE;
-    stack_frame_ptr->autosave.lr = (uint32_t)DestroyTask; // Task return should destroy itself
+    stack_frame_ptr->autosave.lr = reinterpret_cast<std::uint32_t>(OS::Scheduler::DestroyTask); // Task return should destroy itself
     stack_frame_ptr->manualsave.lr = EXC_RETURN_PSP_UNPRIV;
 }
 
-void CreateTask_SVC_Handler(task_func func, uintptr_t arg, enum PriorityLevel priority, char* name)
+void CreateTask_SVC_Handler(task_func func, uintptr_t arg, enum OS::Scheduler::PriorityLevel priority, const char* name)
 {
     struct task_control_block* tcb = 
         (struct task_control_block*)OsMalloc(sizeof(struct task_control_block));
@@ -148,7 +150,7 @@ void CreateTask_SVC_Handler(task_func func, uintptr_t arg, enum PriorityLevel pr
     }
 
     struct task_stack_frame* task_stack_ptr =
-        AllocateCompleteTaskStackFrame(task_stack_top);
+        AllocateCompleteTaskStackFrame(reinterpret_cast<std::uint8_t*>(task_stack_top));
     if (NULL == task_stack_ptr)
         return;    
 
@@ -171,10 +173,10 @@ static void IdleTask(void *arg)
     while(1);
 }
 
-__NAKED static uint32_t StartOS_SVC_Handler()
+__NAKED static std::uint32_t StartOS_SVC_Handler()
 {
     // Create Idle Task
-    CreateTask_SVC_Handler(IdleTask, (uintptr_t)NULL, TASK_PRIO_IDLE, "Idle");
+    CreateTask_SVC_Handler(IdleTask, (uintptr_t)NULL, OS::Scheduler::TASK_PRIO_IDLE, "Idle");
 
     // Set first task    
     scheduler.current_task = 
@@ -191,11 +193,11 @@ __NAKED static uint32_t StartOS_SVC_Handler()
         (struct task_stack_frame*)scheduler.current_task->stack_ptr;
 
     // Start executing first task by setting correct stack pointer
-    __set_PSP((uint32_t)&frame->autosave);
+    __set_PSP(reinterpret_cast<std::uint32_t>(&frame->autosave));
 
     // Obain top of the stack from current NVIC table and set MSP
     uintptr_t vtor = SCB->VTOR;
-    uintptr_t stack_top = ((volatile uint32_t*)vtor)[0];
+    uintptr_t stack_top = (reinterpret_cast<volatile std::uint32_t*>(vtor))[0];
     __set_MSP(stack_top);
     __DSB();
     __ISB();
@@ -208,14 +210,14 @@ __NAKED static uint32_t StartOS_SVC_Handler()
     );
 }
 
-static uint32_t GetTicks()
+static std::uint32_t GetTicks()
 {
     return HAL_GetTick();
 }
 
-void Sleep_SVC_Handler(uint32_t ticks)
+void Sleep_SVC_Handler(std::uint32_t ticks)
 {
-    struct task_event* event = (struct task_event*) OsMalloc(sizeof(struct task_event));
+    struct task_event* event = reinterpret_cast<struct task_event*>(OsMalloc(sizeof(struct task_event)));
     
     struct task_control_block* tcb = scheduler.current_task;
     event->requested_wakeup_timestamp = ticks + GetTicks();
@@ -239,7 +241,7 @@ void DestroyTask_SVC_Handler()
     struct task_control_block *tcb = scheduler.current_task;
     // Remove task from task_list and free space
     LinkedList_RemoveEntry(scheduler.task_list, tcb, list);
-    OsFree((void*)tcb->stack_base);
+    OsFree(reinterpret_cast<void*>(tcb->stack_base));
     OsFree(tcb);
 
     scheduler.current_task = NULL;
@@ -247,6 +249,7 @@ void DestroyTask_SVC_Handler()
     SCB->ICSR |= SCB_ICSR_PENDSVSET_Msk;
 }
 
+extern "C"
 void SchedulerTrigger()
 {
     if (scheduler.current_task->state == TASK_RUNNING)
@@ -280,6 +283,7 @@ void SchedulerTrigger()
     scheduler.current_task->state = TASK_RUNNING;
 }
 
+extern "C"
 __NAKED void PendSV_Handler()
 {
     asm volatile (
@@ -302,6 +306,7 @@ __NAKED void PendSV_Handler()
     );
 }
 
+extern "C"
 void SysTick_Handler()
 {
     HAL_IncTick();
@@ -309,6 +314,7 @@ void SysTick_Handler()
         SCB->ICSR |= SCB_ICSR_PENDSVSET_Msk;
 }
 
+extern "C"
 __NAKED void SVC_Handler()
 {
     asm volatile (
@@ -320,6 +326,7 @@ __NAKED void SVC_Handler()
     );
 }
 
+extern "C"
 void SVC_Handler_C(struct auto_task_stack_frame* args)
 {
     char* pc = (char*)args->pc;
@@ -335,7 +342,7 @@ void SVC_Handler_C(struct auto_task_stack_frame* args)
         CreateTask_SVC_Handler(
             (task_func)args->r0, 
             (uintptr_t)args->r1, 
-            (enum PriorityLevel)args->r2, 
+            (enum OS::Scheduler::PriorityLevel)args->r2, 
             (char*)args->r3);
         break;
     case SLEEP_UNTIL_SVC:
@@ -351,22 +358,24 @@ void SVC_Handler_C(struct auto_task_stack_frame* args)
     }
 }
 
-void StartOS()
-{
-    SVC_CALL(START_OS_SVC);
-}
+namespace OS {
+    void Scheduler::StartOS()
+    {
+        SVC_CALL(START_OS_SVC);
+    }
 
-void CreateTask(task_func func, uintptr_t arg, enum PriorityLevel priority, const char* name)
-{
-    SVC_CALL(CREATE_TASK_SVC);
-}
+    void Scheduler::CreateTask(task_func func, std::uintptr_t arg, enum PriorityLevel priority, const char* name)
+    {
+        SVC_CALL(CREATE_TASK_SVC);
+    }
 
-void DestroyTask()
-{
-    SVC_CALL(DESTROY_TASK_SVC);
-}
+    void Scheduler::DestroyTask()
+    {
+        SVC_CALL(DESTROY_TASK_SVC);
+    }
 
-void Sleep(uint32_t ticks)
-{
-    SVC_CALL(SLEEP_UNTIL_SVC);
+    void Scheduler::Sleep(std::uint32_t ticks)
+    {
+        SVC_CALL(SLEEP_UNTIL_SVC);
+    }
 }

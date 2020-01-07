@@ -4,12 +4,16 @@
 
 #include <stddef.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct LinkedList {
     struct LinkedList* next;
 } LinkedList_t;
 
 #define CONTAINER_OF(ptr, obj, member) \
-    ((obj *)((ptr == NULL) ? NULL : (((void*)ptr) - offsetof(obj, member))))
+    ((obj *)((ptr == NULL) ? NULL : (((uint8_t*)ptr) - offsetof(obj, member))))
 
 #define LinkedList_NextEntry(element, obj, member) \
     ((element == NULL) ? NULL : CONTAINER_OF(element->member.next, obj, member))
@@ -34,5 +38,9 @@ void LinkedList_AddElement(LinkedList_t** head, LinkedList_t* element);
 
 #define LinkedList_RemoveEntry(head, element, member) \
     LinkedList_RemoveElement(&head, &element->member)
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // LINKED_LIST_H_
