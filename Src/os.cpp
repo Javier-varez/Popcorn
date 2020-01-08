@@ -42,7 +42,7 @@ struct task_control_block
 struct task_event
 {
     struct task_control_block*  task;
-    std::uint32_t                    requested_wakeup_timestamp;
+    std::uint32_t               requested_wakeup_timestamp;
     LinkedList_t                list;
 };
 
