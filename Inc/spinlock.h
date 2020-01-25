@@ -6,10 +6,10 @@
 
 namespace OS
 {
-    class Mutex
+    class SpinLock
     {
     public:
-        Mutex();
+        SpinLock();
         void Lock();
         void Unlock();
     private:

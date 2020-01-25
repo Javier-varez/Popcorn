@@ -2,7 +2,7 @@
 #include "stm32f1xx_hal.h"
 #include "memory_management.h"
 #include "linked_list.h"
-#include "mutex.h"
+#include "spinlock.h"
 
 #include <cstddef>
 #include <cstring>
@@ -87,8 +87,8 @@ struct manual_task_stack_frame
 
 struct task_stack_frame
 {
-        struct manual_task_stack_frame manualsave;
-        struct auto_task_stack_frame autosave;
+    struct manual_task_stack_frame manualsave;
+    struct auto_task_stack_frame autosave;
 };
 
 static void* AllocateTaskStack(struct task_control_block *tcb, size_t size)
@@ -330,7 +330,7 @@ extern "C"
 void SVC_Handler_C(struct auto_task_stack_frame* args)
 {
     char* pc = (char*)args->pc;
-    uint8_t svc_code = pc[-2]; // First byte of svc instruction
+    uint8_t svc_code = pc[-sizeof(uint16_t)]; // First byte of svc instruction
 
     switch (svc_code)
     {

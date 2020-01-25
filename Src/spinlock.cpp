@@ -1,16 +1,16 @@
 
-#include "mutex.h"
+#include "spinlock.h"
 extern "C" {
 #include "cmsis_gcc.h"
 }
 
 namespace OS
 {
-    Mutex::Mutex() :
+    SpinLock::SpinLock() :
         available(true)
     { }
 
-    void Mutex::Lock()
+    void SpinLock::Lock()
     {
         bool done = false;
         while (!done)
@@ -21,7 +21,7 @@ namespace OS
         __CLREX();
     }
 
-    void Mutex::Unlock()
+    void SpinLock::Unlock()
     {
         bool done = false;
         while (!done)

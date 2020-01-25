@@ -1,13 +1,16 @@
 #include "memory_management.h"
+#include "platform.h"
 #include <stdlib.h>
 
-void* OsMalloc(size_t size)
+
+
+CLINKAGE void* OsMalloc(size_t size)
 {
     // TODO: Migrate to custom allocation scheme
     return malloc(size);
 }
 
-void OsFree(void* ptr)
+CLINKAGE void OsFree(void* ptr)
 {
     free(ptr);
 }
