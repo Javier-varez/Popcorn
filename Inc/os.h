@@ -10,6 +10,7 @@ constexpr std::uint32_t MAX_TASK_NAME = 10;
 typedef void (*task_func)(void*);
 
 namespace OS {
+    class Blockable;
     class Scheduler {
     public:
         enum PriorityLevel
@@ -31,6 +32,22 @@ namespace OS {
         static void DestroyTask();
         static void Sleep(std::uint32_t ticks);
         static void StartOS();
+        static void Yield();
+
+    private:
+        static void Wait(const Blockable&);
+        friend class Blockable;
+    };
+
+    // Mutex, lists, etc, must be sublcass of Blockable
+    class Blockable {
+    public:
+        virtual bool IsBlocked() const = 0;
+    protected:
+        virtual void Block()
+        {
+            Scheduler::Wait(*this);
+        }
     };
 }
 

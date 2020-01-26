@@ -1,11 +1,11 @@
+#include <cstddef>
+#include <cstring>
+
 #include "os.h"
 #include "stm32f1xx_hal.h"
 #include "memory_management.h"
 #include "linked_list.h"
-#include "spinlock.h"
-
-#include <cstddef>
-#include <cstring>
+#include "mutex.h"
 
 #define __NAKED                     __attribute__((naked))
 
@@ -16,15 +16,24 @@
 #define CREATE_TASK_SVC             (1)
 #define SLEEP_UNTIL_SVC             (2)
 #define DESTROY_TASK_SVC            (3)
+#define YIELD_SVC                   (4)
+#define WAIT_SVC                    (5)
 
 #define XPSR_INIT_VALUE             (1 << 24)
 #define EXC_RETURN_PSP_UNPRIV       (0xFFFFFFFD)
 
-enum task_state
+enum class task_state
 {
-    TASK_RUNNABLE,
-    TASK_RUNNING,
-    TASK_SLEEP,
+    RUNNABLE,
+    RUNNING,
+    SLEEP,
+    BLOCKED
+};
+
+union block_argument
+{
+    std::uint32_t timestamp;
+    const OS::Blockable* blockable;
 };
 
 struct task_control_block
@@ -37,27 +46,19 @@ struct task_control_block
     enum OS::Scheduler::PriorityLevel    priority;
     enum task_state                      state;
     char                                 name[MAX_TASK_NAME];
-};
-
-struct task_event
-{
-    struct task_control_block*  task;
-    std::uint32_t               requested_wakeup_timestamp;
-    LinkedList_t                list;
+    block_argument                       blockArgument;
 };
 
 struct Scheduler
 {
     struct task_control_block*  current_task;
     LinkedList_t*               task_list;
-    LinkedList_t*               event_list;
 };
 
 static struct Scheduler scheduler = 
 {
     .current_task = NULL,
     .task_list = NULL,
-    .event_list = NULL
 };
 
 struct auto_task_stack_frame
@@ -160,7 +161,7 @@ void CreateTask_SVC_Handler(task_func func, uintptr_t arg, enum OS::Scheduler::P
     tcb->arg  = arg;
     tcb->priority = priority;
     tcb->func = func;
-    tcb->state = TASK_RUNNABLE;
+    tcb->state = task_state::RUNNABLE;
     strncpy(tcb->name, name, MAX_TASK_NAME);
     LinkedList_AddEntry(scheduler.task_list, tcb, list);
 
@@ -181,7 +182,7 @@ __NAKED static std::uint32_t StartOS_SVC_Handler()
     // Set first task    
     scheduler.current_task = 
         CONTAINER_OF(scheduler.task_list, struct task_control_block, list);
-    scheduler.current_task->state = TASK_RUNNING;
+    scheduler.current_task->state = task_state::RUNNING;
 
     // Set OS IRQ priorities
     __NVIC_SetPriority(SysTick_IRQn, 0xFF); // Minimum priority for SysTick
@@ -216,18 +217,12 @@ static std::uint32_t GetTicks()
 }
 
 void Sleep_SVC_Handler(std::uint32_t ticks)
-{
-    struct task_event* event = reinterpret_cast<struct task_event*>(OsMalloc(sizeof(struct task_event)));
-    
+{    
     struct task_control_block* tcb = scheduler.current_task;
-    event->requested_wakeup_timestamp = ticks + GetTicks();
-    event->task = tcb;
-
-    // Add event to list
-    LinkedList_AddEntry(scheduler.event_list, event, list);
+    tcb->blockArgument.timestamp = ticks + GetTicks(); // TODO: Handle overflow of requested_wakeup_timestamp
 
     // Send task to sleep
-    tcb->state = TASK_SLEEP;
+    tcb->state = task_state::SLEEP;
 
     // Trigger scheduler (PendSV call)
     SCB->ICSR |= SCB_ICSR_PENDSVSET_Msk;
@@ -249,38 +244,56 @@ void DestroyTask_SVC_Handler()
     SCB->ICSR |= SCB_ICSR_PENDSVSET_Msk;
 }
 
+void Yield_SVC_Handler()
+{
+    // Trigger scheduler (PendSV)
+    SCB->ICSR |= SCB_ICSR_PENDSVSET_Msk;
+}
+
+void Wait_SVC_Handler(const OS::Blockable& blockable)
+{
+    struct task_control_block* tcb = scheduler.current_task;
+
+    // Send task to the blocked state
+    tcb->state = task_state::BLOCKED;
+    tcb->blockArgument.blockable = &blockable;
+    // Trigger scheduler (PendSV)
+    SCB->ICSR |= SCB_ICSR_PENDSVSET_Msk;
+}
+
 extern "C"
 void SchedulerTrigger()
 {
-    if (scheduler.current_task->state == TASK_RUNNING)
-        scheduler.current_task->state = TASK_RUNNABLE;
+    if (scheduler.current_task &&
+        scheduler.current_task->state == task_state::RUNNING)
+        scheduler.current_task->state = task_state::RUNNABLE;
 
     uint32_t ticks = GetTicks();
-    // Check Events
-    struct task_event *event;
-    struct task_event *next_event;
-    LinkedList_WalkEntry_Safe(scheduler.event_list, event, next_event, list)
-    {
-        if (ticks >= event->requested_wakeup_timestamp)
-        {
-            event->task->state = TASK_RUNNABLE;
-            LinkedList_RemoveEntry(scheduler.event_list, event, list);
-            OsFree(event);
-        }
-    }
 
     // Select next task based on priority
     scheduler.current_task = NULL;
     struct task_control_block* tcb = NULL;
     LinkedList_WalkEntry(scheduler.task_list, tcb, list)
     {
-        if ((tcb->state == TASK_RUNNABLE) && 
+        // Resume task if asleep/blocked
+        if ((tcb->state == task_state::SLEEP) &&
+            (ticks >= tcb->blockArgument.timestamp))
+        {
+            tcb->state = task_state::RUNNABLE;
+        }
+        else if ((tcb->state == task_state::BLOCKED) &&
+                 !tcb->blockArgument.blockable->IsBlocked())
+        {
+            tcb->state = task_state::RUNNABLE;
+        }
+
+        if ((tcb->state == task_state::RUNNABLE) && 
             (scheduler.current_task == NULL || (tcb->priority > scheduler.current_task->priority)))
         {
             scheduler.current_task = tcb;
         }
     }
-    scheduler.current_task->state = TASK_RUNNING;
+    scheduler.current_task->state = task_state::RUNNING;
 }
 
 extern "C"
@@ -351,6 +364,12 @@ void SVC_Handler_C(struct auto_task_stack_frame* args)
     case DESTROY_TASK_SVC:
         DestroyTask_SVC_Handler();
         break;
+    case YIELD_SVC:
+        Yield_SVC_Handler();
+        break;
+    case WAIT_SVC:
+        Wait_SVC_Handler(*(const OS::Blockable*)args->r0);
+        break;
 
     default:
         while (1);
@@ -377,5 +396,15 @@ namespace OS {
     void Scheduler::Sleep(std::uint32_t ticks)
     {
         SVC_CALL(SLEEP_UNTIL_SVC);
+    }
+
+    void Scheduler::Yield()
+    {
+        SVC_CALL(YIELD_SVC);
+    }
+
+    void Scheduler::Wait(const Blockable& blockable)
+    {
+        SVC_CALL(WAIT_SVC);
     }
 }

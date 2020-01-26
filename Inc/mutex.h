@@ -1,19 +1,20 @@
-
-#ifndef SPINLOCK_H_
-#define SPINLOCK_H_
+#ifndef MUTEX_H_
+#define MUTEX_H_
 
 #include <cstdint>
+#include "os.h"
 
 namespace OS
 {
-    class SpinLock
+    class Mutex: Blockable
     {
     public:
-        SpinLock();
+        Mutex();
         void Lock();
         void Unlock();
     private:
         std::uint8_t available;
+        bool IsBlocked() const override;
     };
 }
 
