@@ -42,7 +42,8 @@ LOCAL_CXXFLAGS := \
 LOCAL_LDFLAGS := \
 	-Wl,--gc-sections \
 	--specs=nano.specs \
-	--specs=nosys.specs
+	--specs=nosys.specs \
+	-lstdc++
 LOCAL_LINKER_FILE := \
 	$(LOCAL_DIR)/STM32F103X8_FLASH.ld
 LOCAL_SRC := \

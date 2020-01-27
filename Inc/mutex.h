@@ -10,8 +10,8 @@ namespace OS
     {
     public:
         Mutex();
-        void Lock();
-        void Unlock();
+        void lock();
+        void unlock();
     private:
         std::uint8_t available;
         bool IsBlocked() const override;

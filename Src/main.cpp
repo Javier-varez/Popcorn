@@ -1,3 +1,5 @@
+#include <mutex>
+
 #include "stm32f1xx_hal.h"
 #include "os.h"
 #include "mutex.h"
@@ -20,16 +22,15 @@ static void gpio_task(void* arg)
     else if (args->bank == GPIOC)
         __HAL_RCC_GPIOC_CLK_ENABLE();
 
-    mutex.Lock();
-
-    GPIO_InitTypeDef gpio;
-    gpio.Pin = args->pin;
-    gpio.Mode = GPIO_MODE_OUTPUT_PP;
-    gpio.Pull = GPIO_NOPULL;
-    gpio.Speed = GPIO_SPEED_FREQ_LOW;
-    HAL_GPIO_Init(args->bank, &gpio);
-
-    mutex.Unlock();
+    {
+        std::unique_lock<OS::Mutex> l(mutex);
+        GPIO_InitTypeDef gpio;
+        gpio.Pin = args->pin;
+        gpio.Mode = GPIO_MODE_OUTPUT_PP;
+        gpio.Pull = GPIO_NOPULL;
+        gpio.Speed = GPIO_SPEED_FREQ_LOW;
+        HAL_GPIO_Init(args->bank, &gpio);
+    }
 
     while (1)
     {
@@ -84,13 +85,14 @@ void InitTask(void *args)
         1500
     };
 
-    mutex.Lock();
+    {
+        std::unique_lock<OS::Mutex> l(mutex);
 
-    OS::Scheduler::CreateTask(gpio_task, (uintptr_t)&args_task_1, OS::Scheduler::TASK_PRIO_0, "GPIOC_13");
-    OS::Scheduler::CreateTask(gpio_task, (uintptr_t)&args_task_2, OS::Scheduler::TASK_PRIO_0, "GPIOA_0");
+        OS::Scheduler::CreateTask(gpio_task, (uintptr_t)&args_task_1, OS::Scheduler::TASK_PRIO_0, "GPIOC_13");
+        OS::Scheduler::CreateTask(gpio_task, (uintptr_t)&args_task_2, OS::Scheduler::TASK_PRIO_0, "GPIOA_0");
 
-    OS::Scheduler::Sleep(1000);
-    mutex.Unlock();
+        OS::Scheduler::Sleep(1000);
+    }
 }
 
 int main()
