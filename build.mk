@@ -44,7 +44,7 @@ LOCAL_LDFLAGS := \
 	--specs=nano.specs \
 	--specs=nosys.specs
 LOCAL_LINKER_FILE := \
-	$(LOCAL_DIR)/STM32F103XB_FLASH.ld
+	$(LOCAL_DIR)/STM32F103X8_FLASH.ld
 LOCAL_SRC := \
 	$(wildcard $(LOCAL_DIR)/Src/*.c) \
 	$(wildcard $(LOCAL_DIR)/Src/*.cpp)
