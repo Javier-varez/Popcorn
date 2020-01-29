@@ -6,6 +6,7 @@
 #include "memory_management.h"
 #include "linked_list.h"
 #include "mutex.h"
+#include "critical_section.h"
 
 #define __NAKED                     __attribute__((naked))
 
@@ -33,7 +34,7 @@ enum class task_state
 
 union block_argument
 {
-    std::uint32_t timestamp;
+    std::uint64_t timestamp;
     const OS::Blockable* blockable;
 };
 
@@ -54,12 +55,14 @@ struct Scheduler
 {
     struct task_control_block*  current_task;
     LinkedList_t*               task_list;
+    uint64_t                    ticks;
 };
 
 static struct Scheduler scheduler = 
 {
     .current_task = NULL,
     .task_list = NULL,
+    .ticks = 0
 };
 
 struct auto_task_stack_frame
@@ -212,15 +215,16 @@ __NAKED static std::uint32_t StartOS_SVC_Handler()
     );
 }
 
-static std::uint32_t GetTicks()
+static std::uint64_t GetTicks()
 {
-    return HAL_GetTick();
+    OS::CriticalSection s;
+    return scheduler.ticks;
 }
 
 void Sleep_SVC_Handler(std::uint32_t ticks)
 {    
     struct task_control_block* tcb = scheduler.current_task;
-    tcb->blockArgument.timestamp = ticks + GetTicks(); // TODO: Handle overflow of requested_wakeup_timestamp
+    tcb->blockArgument.timestamp = ticks + GetTicks();
 
     // Send task to sleep
     tcb->state = task_state::SLEEPING;
@@ -269,7 +273,7 @@ void SchedulerTrigger()
         scheduler.current_task->state == task_state::RUNNING)
         scheduler.current_task->state = task_state::RUNNABLE;
 
-    uint32_t ticks = GetTicks();
+    uint64_t ticks = GetTicks();
 
     // Select next task based on priority
     scheduler.current_task = NULL;
@@ -324,8 +328,13 @@ extern "C"
 void SysTick_Handler()
 {
     HAL_IncTick();
-    if (scheduler.current_task != NULL)
-        SCB->ICSR |= SCB_ICSR_PENDSVSET_Msk;
+
+    {
+        OS::CriticalSection s;
+        scheduler.ticks++;
+        if (scheduler.current_task != NULL)
+            SCB->ICSR |= SCB_ICSR_PENDSVSET_Msk;
+    }
 }
 
 extern "C"
