@@ -18,6 +18,7 @@
 #define DESTROY_TASK_SVC            (3)
 #define YIELD_SVC                   (4)
 #define WAIT_SVC                    (5)
+#define REGISTER_ERROR_SVC          (6)
 
 #define XPSR_INIT_VALUE             (1 << 24)
 #define EXC_RETURN_PSP_UNPRIV       (0xFFFFFFFD)
@@ -26,7 +27,7 @@ enum class task_state
 {
     RUNNABLE,
     RUNNING,
-    SLEEP,
+    SLEEPING,
     BLOCKED
 };
 
@@ -222,7 +223,7 @@ void Sleep_SVC_Handler(std::uint32_t ticks)
     tcb->blockArgument.timestamp = ticks + GetTicks(); // TODO: Handle overflow of requested_wakeup_timestamp
 
     // Send task to sleep
-    tcb->state = task_state::SLEEP;
+    tcb->state = task_state::SLEEPING;
 
     // Trigger scheduler (PendSV call)
     SCB->ICSR |= SCB_ICSR_PENDSVSET_Msk;
@@ -276,7 +277,7 @@ void SchedulerTrigger()
     LinkedList_WalkEntry(scheduler.task_list, tcb, list)
     {
         // Resume task if asleep/blocked
-        if ((tcb->state == task_state::SLEEP) &&
+        if ((tcb->state == task_state::SLEEPING) &&
             (ticks >= tcb->blockArgument.timestamp))
         {
             tcb->state = task_state::RUNNABLE;
@@ -370,6 +371,9 @@ void SVC_Handler_C(struct auto_task_stack_frame* args)
     case WAIT_SVC:
         Wait_SVC_Handler(*(const OS::Blockable*)args->r0);
         break;
+    case REGISTER_ERROR_SVC:
+        // TODO: Handle Register Error SVC call and register backtrace
+        break;
 
     default:
         while (1);
@@ -406,5 +410,10 @@ namespace OS {
     void Scheduler::Wait(const Blockable& blockable)
     {
         SVC_CALL(WAIT_SVC);
+    }
+
+    void Scheduler::RegisterError()
+    {
+        SVC_CALL(REGISTER_ERROR_SVC);
     }
 }

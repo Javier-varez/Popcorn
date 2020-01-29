@@ -34,9 +34,13 @@ namespace OS
         while (!done)
         {
             if (!__LDREXB(&available))
+            {
                 done = __STREXB(true, &available) == 0;
+            }
             else
-                while(true); // Already released!
+            {
+                OS::Scheduler::RegisterError();
+            }
         }
         __CLREX();
         OS::Scheduler::Yield();

@@ -33,6 +33,7 @@ namespace OS {
         static void Sleep(std::uint32_t ticks);
         static void StartOS();
         static void Yield();
+        static void RegisterError();
 
     private:
         static void Wait(const Blockable&);
