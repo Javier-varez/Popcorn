@@ -10,7 +10,7 @@ namespace OS
 
     }
 
-    void Mutex::lock()
+    void Mutex::Lock()
     {
         bool done = false;
         do
@@ -28,7 +28,7 @@ namespace OS
         __CLREX();
     }
 
-    void Mutex::unlock()
+    void Mutex::Unlock()
     {
         bool done = false;
         while (!done)

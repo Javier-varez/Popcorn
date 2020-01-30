@@ -1,8 +1,12 @@
-#include <mutex>
-
 #include "stm32f1xx_hal.h"
 #include "os.h"
 #include "mutex.h"
+#include "unique_lock.h"
+
+void App_SysTick_Hook()
+{
+    HAL_IncTick();
+}
 
 struct TaskArgs
 {
@@ -23,7 +27,7 @@ static void gpio_task(void* arg)
         __HAL_RCC_GPIOC_CLK_ENABLE();
 
     {
-        std::unique_lock<OS::Mutex> l(mutex);
+        OS::UniqueLock<OS::Mutex> l(mutex);
         GPIO_InitTypeDef gpio;
         gpio.Pin = args->pin;
         gpio.Mode = GPIO_MODE_OUTPUT_PP;
@@ -86,7 +90,7 @@ void InitTask(void *args)
     };
 
     {
-        std::unique_lock<OS::Mutex> l(mutex);
+        OS::UniqueLock<OS::Mutex> l(mutex);
 
         OS::Scheduler::CreateTask(gpio_task, (uintptr_t)&args_task_1, OS::Scheduler::TASK_PRIO_0, "GPIOC_13");
         OS::Scheduler::CreateTask(gpio_task, (uintptr_t)&args_task_2, OS::Scheduler::TASK_PRIO_0, "GPIOA_0");

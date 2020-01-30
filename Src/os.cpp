@@ -222,7 +222,7 @@ static std::uint64_t GetTicks()
 }
 
 void Sleep_SVC_Handler(std::uint32_t ticks)
-{    
+{
     struct task_control_block* tcb = scheduler.current_task;
     tcb->blockArgument.timestamp = ticks + GetTicks();
 
@@ -324,11 +324,15 @@ __NAKED void PendSV_Handler()
     );
 }
 
+__weak void App_SysTick_Hook()
+{
+
+}
+
 extern "C"
 void SysTick_Handler()
 {
-    HAL_IncTick();
-
+    App_SysTick_Hook();
     {
         OS::CriticalSection s;
         scheduler.ticks++;

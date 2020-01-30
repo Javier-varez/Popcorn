@@ -9,6 +9,9 @@ constexpr std::uint32_t MAX_TASK_NAME = 10;
 
 typedef void (*task_func)(void*);
 
+// Application Hooks
+void App_SysTick_Hook();
+
 namespace OS {
     class Blockable;
     class Scheduler {
