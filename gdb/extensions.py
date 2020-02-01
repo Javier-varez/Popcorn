@@ -22,19 +22,6 @@ class TCBPrettyPrinter(object):
                  self.val["stack_ptr"],
                  self.val["arg"]))
 
-class TaskEventPrettyPrinter(object):
-    """Print 'task_event'"""
-
-    def __init__(self, val):
-        self.val = val
-
-    def to_string(self):
-        return ("struct task_event:\n"
-                "\twakeup_timestamp:\t\t%d\n"
-                "\ttask_ptr:\t\t\t0x%08x" %
-                (self.val["requested_wakeup_timestamp"],
-                 self.val["task"]))
-
 class LinkedListParser(gdb.Command):
     """Parse a LinkedList"""
 
@@ -89,8 +76,6 @@ class CustomPrettyPrinterLocator(PrettyPrinter):
 
         if typename == "task_control_block":
             return TCBPrettyPrinter(val)
-        elif typename == "task_event":
-            return TaskEventPrettyPrinter(val)
 
 if __name__ == "__main__":
     register_pretty_printer(None, CustomPrettyPrinterLocator(), replace=True)

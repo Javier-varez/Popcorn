@@ -2,11 +2,11 @@
 #include <cstring>
 
 #include "os.h"
-#include "stm32f1xx_hal.h"
 #include "memory_management.h"
 #include "linked_list.h"
-#include "mutex.h"
 #include "critical_section.h"
+#include "os_config.h"
+#include "platform.h"
 
 #define __NAKED                     __attribute__((naked))
 
@@ -40,6 +40,9 @@ union block_argument
 
 struct task_control_block
 {
+    // Assembly code relies on the stack_ptr being at
+    // offset 0 from the task_control block
+    // DO NOT CHANGE!
     uintptr_t                            stack_ptr;
     uintptr_t                            arg;
     task_func                            func;
@@ -200,7 +203,7 @@ __NAKED static std::uint32_t StartOS_SVC_Handler()
     // Start executing first task by setting correct stack pointer
     __set_PSP(reinterpret_cast<std::uint32_t>(&frame->autosave));
 
-    // Obain top of the stack from current NVIC table and set MSP
+    // Obtain top of the stack from current NVIC table and set MSP
     uintptr_t vtor = SCB->VTOR;
     uintptr_t stack_top = (reinterpret_cast<volatile std::uint32_t*>(vtor))[0];
     __set_MSP(stack_top);
@@ -266,8 +269,7 @@ void Wait_SVC_Handler(const OS::Blockable& blockable)
     SCB->ICSR |= SCB_ICSR_PENDSVSET_Msk;
 }
 
-extern "C"
-void SchedulerTrigger()
+CLINKAGE void SchedulerTrigger()
 {
     if (scheduler.current_task &&
         scheduler.current_task->state == task_state::RUNNING)
@@ -301,8 +303,7 @@ void SchedulerTrigger()
     scheduler.current_task->state = task_state::RUNNING;
 }
 
-extern "C"
-__NAKED void PendSV_Handler()
+CLINKAGE __NAKED void PendSV_Handler()
 {
     asm volatile (
         "               ldr r1, [%[current_task_ptr]]     \n"
@@ -310,9 +311,9 @@ __NAKED void PendSV_Handler()
         "               mrs r0, psp                       \n"
         "               stmdb r0!, {r4-r11, r14}          \n"
         "               str r0, [r1]                      \n" // scheduler.current_task->stack_ptr = psp
-        "TaskSwitch:    push {r0, %[current_task_ptr]}    \n"
+        "TaskSwitch:    push {%[current_task_ptr]}        \n"
         "               bl SchedulerTrigger               \n"
-        "               pop {r0,  %[current_task_ptr]}    \n"
+        "               pop {%[current_task_ptr]}         \n"
         "               ldr r1, [%[current_task_ptr]]     \n"
         "               ldr r0, [r1]                      \n"
         "               ldmia r0!, {r4-r11, r14}          \n"
@@ -324,13 +325,12 @@ __NAKED void PendSV_Handler()
     );
 }
 
-__weak void App_SysTick_Hook()
+__attribute__((weak)) void App_SysTick_Hook()
 {
 
 }
 
-extern "C"
-void SysTick_Handler()
+CLINKAGE void SysTick_Handler()
 {
     App_SysTick_Hook();
     {
@@ -341,8 +341,7 @@ void SysTick_Handler()
     }
 }
 
-extern "C"
-__NAKED void SVC_Handler()
+CLINKAGE __NAKED void SVC_Handler()
 {
     asm volatile (
         "    tst lr, #4              \n"
@@ -353,8 +352,7 @@ __NAKED void SVC_Handler()
     );
 }
 
-extern "C"
-void SVC_Handler_C(struct auto_task_stack_frame* args)
+CLINKAGE void SVC_Handler_C(struct auto_task_stack_frame* args)
 {
     char* pc = (char*)args->pc;
     uint8_t svc_code = pc[-sizeof(uint16_t)]; // First byte of svc instruction

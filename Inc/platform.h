@@ -5,6 +5,4 @@
 
 #define CLINKAGE    extern "C"
 
-constexpr static std::uint32_t MAX_TASKS = 32;
-
 #endif

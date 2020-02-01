@@ -48,7 +48,7 @@ namespace OS {
     public:
         virtual bool IsBlocked() const = 0;
     protected:
-        virtual void Block()
+        void Block()
         {
             Scheduler::Wait(*this);
         }
