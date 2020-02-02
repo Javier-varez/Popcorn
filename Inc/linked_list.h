@@ -34,10 +34,10 @@ void LinkedList_RemoveElement(LinkedList_t** head, LinkedList_t* element);
 void LinkedList_AddElement(LinkedList_t** head, LinkedList_t* element);
 
 #define LinkedList_AddEntry(head, element, member) \
-    LinkedList_AddElement(&head, &element->member)
+    LinkedList_AddElement(&(head), &(element)->member)
 
 #define LinkedList_RemoveEntry(head, element, member) \
-    LinkedList_RemoveElement(&head, &element->member)
+    LinkedList_RemoveElement(&(head), &(element)->member)
 
 #ifdef __cplusplus
 }

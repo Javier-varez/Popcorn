@@ -1,7 +1,8 @@
 #include "stm32f1xx_hal.h"
-#include "os.h"
+#include "syscall.h"
 #include "mutex.h"
 #include "unique_lock.h"
+#include "cortex-m_port.h"
 
 void App_SysTick_Hook()
 {
@@ -39,7 +40,7 @@ static void gpio_task(void* arg)
 
     while (1)
     {
-        OS::Scheduler::Sleep(args->delay);
+        OS::Syscall::Instance().Sleep(args->delay);
         HAL_GPIO_TogglePin(args->bank, args->pin);
     }
 }
@@ -82,10 +83,10 @@ void InitTask(void *args)
         OS::UniqueLock<OS::Mutex> l(mutex);
 
         for (uint32_t i = 0; taskArgs[i] != nullptr; i++) {
-            OS::Scheduler::CreateTask(gpio_task, (uintptr_t)taskArgs[i], OS::Scheduler::TASK_PRIO_0, taskArgs[i]->name);
+            OS::Syscall::Instance().CreateTask(gpio_task, (uintptr_t)taskArgs[i], OS::Priority::Level_0, taskArgs[i]->name);
         }
 
-        OS::Scheduler::Sleep(1000);
+        OS::Syscall::Instance().Sleep(1000);
     }
 }
 
@@ -116,7 +117,7 @@ int main()
     HAL_Init();
     ConfigureClk();
 
-    OS::Scheduler::CreateTask(InitTask, (uintptr_t)args, OS::Scheduler::TASK_PRIO_0, "Init task");
-    OS::Scheduler::StartOS();
+    OS::Syscall::Instance().CreateTask(InitTask, (uintptr_t)args, OS::Priority::Level_0, "Init task");
+    OS::Syscall::Instance().StartOS();
     return 0;
 }

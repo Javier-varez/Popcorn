@@ -1,6 +1,6 @@
 
 #include "spinlock.h"
-#include "os.h"
+#include "syscall.h"
 extern "C" {
 #include "cmsis_gcc.h"
 }
@@ -33,7 +33,7 @@ namespace OS
             }
             else
             {
-                OS::Scheduler::RegisterError();
+                OS::Syscall::Instance().RegisterError();
             }
         }
         __CLREX();

@@ -1,15 +1,7 @@
 #ifndef OS_CONFIG_H_
 #define OS_CONFIG_H_
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-// Use proper header for MCU Here
-#include "stm32f103xb.h"
-
-#ifdef __cplusplus
-}
-#endif
+constexpr std::uint32_t TASK_STACK_SIZE = 256;
+constexpr std::uint32_t MAX_TASK_NAME = 10;
 
 #endif

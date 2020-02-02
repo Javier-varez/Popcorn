@@ -10,12 +10,16 @@ namespace OS
         // Masking all Interrupts but the hardfault and NMI
         explicit inline CriticalSection()
         {
+            #ifndef UNITTEST
             asm volatile("cpsid i");
+            #endif
         }
 
         inline ~CriticalSection()
         {
+            #ifndef UNITTEST
             asm volatile("cpsie i");
+            #endif
         }
     };
 }

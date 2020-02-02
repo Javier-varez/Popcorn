@@ -2,7 +2,7 @@
 #define MUTEX_H_
 
 #include <cstdint>
-#include "os.h"
+#include "blockable.h"
 
 namespace OS
 {

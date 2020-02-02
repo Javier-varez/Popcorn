@@ -39,11 +39,11 @@ namespace OS
             }
             else
             {
-                OS::Scheduler::RegisterError();
+                OS::Syscall::Instance().RegisterError();
             }
         }
         __CLREX();
-        OS::Scheduler::Yield();
+        OS::Syscall::Instance().Yield();
     }
 
     bool Mutex::IsBlocked() const {
