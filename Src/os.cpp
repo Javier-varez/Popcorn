@@ -181,41 +181,17 @@ static void IdleTask(void *arg)
     while(1);
 }
 
-__NAKED static std::uint32_t StartOS_SVC_Handler()
+static void StartOS_SVC_Handler()
 {
     // Create Idle Task
     CreateTask_SVC_Handler(IdleTask, (uintptr_t)NULL, OS::Scheduler::TASK_PRIO_IDLE, "Idle");
-
-    // Set first task    
-    scheduler.current_task = 
-        CONTAINER_OF(scheduler.task_list, struct task_control_block, list);
-    scheduler.current_task->state = task_state::RUNNING;
 
     // Set OS IRQ priorities
     __NVIC_SetPriority(SysTick_IRQn, 0xFF); // Minimum priority for SysTick
     __NVIC_SetPriority(PendSV_IRQn,  0xFF); // Minimum priority for PendSV
     __NVIC_SetPriority(SVCall_IRQn,  0x00); // Maximum priority for SVC
 
-    // Obtain first task stack pointer
-    struct task_stack_frame* frame =
-        (struct task_stack_frame*)scheduler.current_task->stack_ptr;
-
-    // Start executing first task by setting correct stack pointer
-    __set_PSP(reinterpret_cast<std::uint32_t>(&frame->autosave));
-
-    // Obtain top of the stack from current NVIC table and set MSP
-    uintptr_t vtor = SCB->VTOR;
-    uintptr_t stack_top = (reinterpret_cast<volatile std::uint32_t*>(vtor))[0];
-    __set_MSP(stack_top);
-    __DSB();
-    __ISB();
-
-    // Use exception return code for Unprivileged mode and PSP stack
-    asm volatile (
-        "    mov lr, %[exc_return]    \n"
-        "    bx lr                    \n"
-        : : [exc_return] "i" (EXC_RETURN_PSP_UNPRIV)
-    );
+    SCB->ICSR |= SCB_ICSR_PENDSVSET_Msk;
 }
 
 static std::uint64_t GetTicks()
@@ -319,9 +295,11 @@ CLINKAGE __NAKED void PendSV_Handler()
         "               ldmia r0!, {r4-r11, r14}          \n"
         "               msr psp, r0                       \n" // psp = scheduler.current_task->stack_ptr
         "               isb                               \n"
+        "               mov lr, %[exc_return]             \n"
         "               bx lr                             \n"
         : : 
-        [current_task_ptr] "r" (&scheduler.current_task)
+        [current_task_ptr] "r" (&scheduler.current_task),
+        [exc_return] "i" (EXC_RETURN_PSP_UNPRIV)
     );
 }
 
@@ -396,6 +374,7 @@ namespace OS {
     void Scheduler::StartOS()
     {
         SVC_CALL(START_OS_SVC);
+        while (1); // Should never get here
     }
 
     void Scheduler::CreateTask(task_func func, std::uintptr_t arg, enum PriorityLevel priority, const char* name)

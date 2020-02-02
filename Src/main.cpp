@@ -10,6 +10,7 @@ void App_SysTick_Hook()
 
 struct TaskArgs
 {
+    const char*     name;
     GPIO_TypeDef*   bank;
     uint16_t        pin;
     uint32_t        delay;
@@ -75,25 +76,14 @@ static void ConfigureClk()
 
 void InitTask(void *args)
 {
-    static struct TaskArgs args_task_1 = 
-    {
-        GPIOC,
-        GPIO_PIN_13,
-        1000
-    };
-
-    static struct TaskArgs args_task_2 = 
-    {
-        GPIOA,
-        GPIO_PIN_0,
-        1500
-    };
+    struct TaskArgs** taskArgs = (struct TaskArgs**)(args);
 
     {
         OS::UniqueLock<OS::Mutex> l(mutex);
 
-        OS::Scheduler::CreateTask(gpio_task, (uintptr_t)&args_task_1, OS::Scheduler::TASK_PRIO_0, "GPIOC_13");
-        OS::Scheduler::CreateTask(gpio_task, (uintptr_t)&args_task_2, OS::Scheduler::TASK_PRIO_0, "GPIOA_0");
+        for (uint32_t i = 0; taskArgs[i] != nullptr; i++) {
+            OS::Scheduler::CreateTask(gpio_task, (uintptr_t)taskArgs[i], OS::Scheduler::TASK_PRIO_0, taskArgs[i]->name);
+        }
 
         OS::Scheduler::Sleep(1000);
     }
@@ -101,10 +91,32 @@ void InitTask(void *args)
 
 int main()
 {
+    struct TaskArgs args_task_1 = 
+    {
+        "GPIO_C13",
+        GPIOC,
+        GPIO_PIN_13,
+        1000
+    };
+
+    struct TaskArgs args_task_2 = 
+    {
+        "GPIO_A0",
+        GPIOA,
+        GPIO_PIN_0,
+        1500
+    };
+
+    struct TaskArgs* args[] = {
+        &args_task_1,
+        &args_task_2,
+        nullptr
+    };
+
     HAL_Init();
     ConfigureClk();
 
-    OS::Scheduler::CreateTask(InitTask, (uintptr_t)NULL, OS::Scheduler::TASK_PRIO_0, "Init task");
+    OS::Scheduler::CreateTask(InitTask, (uintptr_t)args, OS::Scheduler::TASK_PRIO_0, "Init task");
     OS::Scheduler::StartOS();
     return 0;
 }
