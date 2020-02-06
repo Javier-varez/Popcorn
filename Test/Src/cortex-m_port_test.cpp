@@ -78,7 +78,8 @@ TEST_F(MCUTest, HandleSVC_CreateTask_Test)
     callStack.frame.pc = (uint32_t)(&CreateTask_SVC) + sizeof(uint16_t);
     callStack.frame.xpsr = 0;
 
-    uint32_t arg = 0xF1F2F3F4;
+    constexpr uint32_t arg = 0xF1F2F3F4;
+    constexpr uint32_t stack_size = 123;
     enum OS::Priority prio = OS::Priority::Level_5;
     const char name[] = "FuncName";
 
@@ -86,8 +87,9 @@ TEST_F(MCUTest, HandleSVC_CreateTask_Test)
     callStack.frame.r2 = arg;
     callStack.frame.r3 = (uint32_t)prio;
     callStack.data[0] = (uint32_t)name;
+    callStack.data[1] = (uint32_t)stack_size;
 
-    EXPECT_CALL(kernel, CreateTask(testfunc, arg, prio, name)).Times(1).RetiresOnSaturation();
+    EXPECT_CALL(kernel, CreateTask(testfunc, arg, prio, name, stack_size)).Times(1).RetiresOnSaturation();
     HandleSVC(&callStack.frame);
 }
 
@@ -98,9 +100,10 @@ TEST_F(MCUTest, HandleSVC_Sleep_Test)
     callStack.frame.pc = (uint32_t)(&Sleep_SVC) + sizeof(uint16_t);
     callStack.frame.xpsr = 0;
 
-    callStack.frame.r1 = 1234;
+    constexpr uint32_t sleep_time_ms = 1234;
+    callStack.frame.r1 = sleep_time_ms;
 
-    EXPECT_CALL(kernel, Sleep(1234)).Times(1).RetiresOnSaturation();
+    EXPECT_CALL(kernel, Sleep(sleep_time_ms)).Times(1).RetiresOnSaturation();
     HandleSVC(&callStack.frame);
 }
 

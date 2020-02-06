@@ -12,6 +12,9 @@ namespace OS
     Kernel* g_kernel = nullptr;
 }
 
+// Check the minimum task stack size is larger than the stack frame + alignment
+static_assert(MINIMUM_TASK_STACK_SIZE > (sizeof(OS::task_stack_frame) + sizeof(uint32_t)));
+
 static void* AllocateTaskStack(struct OS::task_control_block *tcb, size_t size)
 {
     void* task_stack_top = NULL;
@@ -20,7 +23,7 @@ static void* AllocateTaskStack(struct OS::task_control_block *tcb, size_t size)
     if (stack != NULL)
     {
         tcb->stack_base = (uintptr_t)&stack[0];
-        task_stack_top = &stack[size-1];
+        task_stack_top = &stack[size];
     }
 
     return task_stack_top;
@@ -61,14 +64,16 @@ static void InitializeTask(
     stack_frame_ptr->manualsave.lr = EXC_RETURN_PSP_UNPRIV;
 }
 
-void OS::Kernel::CreateTask(task_func func, uintptr_t arg, enum OS::Priority priority, const char* name)
+void OS::Kernel::CreateTask(task_func func, uintptr_t arg, enum OS::Priority priority, const char* name, std::uint32_t stack_size)
 {
     struct task_control_block* tcb = 
         (struct task_control_block*)OsMalloc(sizeof(struct task_control_block));
     if (NULL == tcb)
         return;
 
-    void* task_stack_top = AllocateTaskStack(tcb, TASK_STACK_SIZE);
+    stack_size = stack_size < MINIMUM_TASK_STACK_SIZE ? MINIMUM_TASK_STACK_SIZE : stack_size;
+
+    void* task_stack_top = AllocateTaskStack(tcb, stack_size);
     if (task_stack_top == NULL)
     {
         OsFree(tcb);
@@ -100,7 +105,7 @@ void IdleTask(void *arg)
 void OS::Kernel::StartOS()
 {
     // Create Idle Task
-    CreateTask(IdleTask, (uintptr_t)NULL, OS::Priority::IDLE, "Idle");
+    CreateTask(IdleTask, (uintptr_t)NULL, OS::Priority::IDLE, "Idle", MINIMUM_TASK_STACK_SIZE);
 
     Hw::g_mcu->Initialize();
     Hw::g_mcu->TriggerPendSV();

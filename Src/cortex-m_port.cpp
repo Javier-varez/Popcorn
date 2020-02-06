@@ -74,9 +74,10 @@ namespace Hw
         case OS::SyscallIdx::CreateTask:
             OS::g_kernel->CreateTask(
                 (task_func)args->r1,
-                (uintptr_t)args->r2, 
-                (enum OS::Priority)args->r3, 
-                (char*)*original_call_stack); // this argument is now on the stack
+                (std::uintptr_t)args->r2,
+                (enum OS::Priority)args->r3,
+                (char*)*original_call_stack,
+                (std::uint32_t)*(original_call_stack + 1));
             break;
         case OS::SyscallIdx::Sleep:
             OS::g_kernel->Sleep((uint32_t)args->r1);

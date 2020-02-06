@@ -23,7 +23,7 @@ namespace OS {
         #endif
     }
 
-    void Syscall::CreateTask(task_func func, std::uintptr_t arg, enum Priority priority, const char* name)
+    void Syscall::CreateTask(task_func func, std::uintptr_t arg, enum Priority priority, const char* name, std::uint32_t stack_size)
     {
         Hw::MCU::SupervisorCall<SyscallIdx::CreateTask>();
     }

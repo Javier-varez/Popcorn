@@ -29,7 +29,7 @@ namespace OS {
     class Blockable;
     class Syscall {
     public:
-        void CreateTask(task_func func, std::uintptr_t arg, enum Priority priority, const char* name);
+        void CreateTask(task_func func, std::uintptr_t arg, enum Priority priority, const char* name, std::uint32_t stack_size);
         void DestroyTask();
         void Sleep(std::uint32_t ticks);
         void StartOS();

@@ -12,7 +12,7 @@ namespace OS
     public:
         MockKernel() = default;
         MOCK_METHOD0(StartOS, void());
-        MOCK_METHOD4(CreateTask, void(task_func func, uintptr_t arg, enum OS::Priority priority, const char* name));
+        MOCK_METHOD5(CreateTask, void(task_func func, uintptr_t arg, enum OS::Priority priority, const char* name, std::uint32_t stack_size));
         MOCK_METHOD1(Sleep, void(std::uint32_t ticks));
         MOCK_METHOD0(DestroyTask, void());
         MOCK_METHOD0(Yield, void());

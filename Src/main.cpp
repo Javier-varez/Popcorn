@@ -13,8 +13,9 @@ struct TaskArgs
 {
     const char*     name;
     GPIO_TypeDef*   bank;
-    uint16_t        pin;
-    uint32_t        delay;
+    std::uint16_t   pin;
+    std::uint32_t   delay;
+    std::uint32_t   stack_size;
 };
 
 static OS::Mutex mutex;
@@ -83,7 +84,7 @@ void InitTask(void *args)
         OS::UniqueLock<OS::Mutex> l(mutex);
 
         for (uint32_t i = 0; taskArgs[i] != nullptr; i++) {
-            OS::Syscall::Instance().CreateTask(gpio_task, (uintptr_t)taskArgs[i], OS::Priority::Level_0, taskArgs[i]->name);
+            OS::Syscall::Instance().CreateTask(gpio_task, (uintptr_t)taskArgs[i], OS::Priority::Level_0, taskArgs[i]->name, taskArgs[i]->stack_size);
         }
 
         OS::Syscall::Instance().Sleep(1000);
@@ -97,7 +98,8 @@ int main()
         "GPIO_C13",
         GPIOC,
         GPIO_PIN_13,
-        1000
+        1000,
+        256
     };
 
     struct TaskArgs args_task_2 = 
@@ -105,7 +107,8 @@ int main()
         "GPIO_A0",
         GPIOA,
         GPIO_PIN_0,
-        1500
+        1500,
+        256
     };
 
     struct TaskArgs* args[] = {
@@ -114,10 +117,12 @@ int main()
         nullptr
     };
 
+    static constexpr std::uint32_t InitTaskStackSize = 512;
+
     HAL_Init();
     ConfigureClk();
 
-    OS::Syscall::Instance().CreateTask(InitTask, (uintptr_t)args, OS::Priority::Level_0, "Init task");
+    OS::Syscall::Instance().CreateTask(InitTask, (uintptr_t)args, OS::Priority::Level_0, "Init task", InitTaskStackSize);
     OS::Syscall::Instance().StartOS();
     return 0;
 }

@@ -87,7 +87,7 @@ namespace OS
         Kernel();
 
         TEST_VIRTUAL void StartOS();
-        TEST_VIRTUAL void CreateTask(task_func func, uintptr_t arg, enum OS::Priority priority, const char* name);
+        TEST_VIRTUAL void CreateTask(task_func func, uintptr_t arg, enum OS::Priority priority, const char* name, std::uint32_t stack_size);
         TEST_VIRTUAL void Sleep(std::uint32_t ticks);
         TEST_VIRTUAL void DestroyTask();
         TEST_VIRTUAL void Yield();
@@ -95,6 +95,7 @@ namespace OS
         TEST_VIRTUAL void RegisterError(struct auto_task_stack_frame* args);
 
         TEST_VIRTUAL std::uint64_t GetTicks();
+        TEST_VIRTUAL ~Kernel() = default;
 
     private:
         TEST_VIRTUAL void TriggerScheduler();

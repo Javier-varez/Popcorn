@@ -41,7 +41,6 @@ TEST_SRC := \
 	$(LOCAL_DIR)/../Src/syscalls.cpp \
 	$(LOCAL_DIR)/../Src/cortex-m_port.cpp \
 	$(LOCAL_DIR)/../Src/kernel.cpp \
-	$(LOCAL_DIR)/../Src/memory_management.cpp \
 	$(LOCAL_DIR)/../Src/linked_list.c
 
 LOCAL_SRC := \

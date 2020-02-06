@@ -31,6 +31,8 @@ namespace Hw
             #endif
         }
         TEST_VIRTUAL void TriggerPendSV();
+
+        TEST_VIRTUAL ~MCU() = default;
     protected:
         TEST_VIRTUAL void SupervisorCall(OS::SyscallIdx svc);
         TEST_VIRTUAL void HandleSVC(struct OS::auto_task_stack_frame* args);

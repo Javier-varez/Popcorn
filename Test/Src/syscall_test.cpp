@@ -48,7 +48,7 @@ static void func(void*) {}
 TEST_F(SyscallTest, CreateTask_Test)
 {
     EXPECT_CALL(mcu, SupervisorCall(OS::SyscallIdx::CreateTask));
-    syscall->CreateTask(func, 0, OS::Priority::Level_0, "");
+    syscall->CreateTask(func, 0, OS::Priority::Level_0, "", 0);
 }
 
 TEST_F(SyscallTest, DestroyTask_Test)
