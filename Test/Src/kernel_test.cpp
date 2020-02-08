@@ -145,9 +145,8 @@ TEST_F(KernelTest, CreateTaskInitializesTCB_Test)
     ASSERT_EQ(task1TCB.arg, 123U);
     ASSERT_EQ(task1TCB.func, &TaskFunction);
     ASSERT_EQ(task1TCB.stack_base, (uintptr_t)task1Stack);
+    ASSERT_EQ(task1TCB.run_last_timestamp, 0ULL);
     ASSERT_EQ((uint8_t*)task1TCB.stack_ptr, task1Stack + stack_size - sizeof(OS::task_stack_frame));
-
-
 }
 
 TEST_F(KernelTest, CreateTaskInitializesStack_Test)
@@ -514,7 +513,7 @@ TEST_F(KernelTest, Priority_Test)
     EXPECT_EQ(GetCurrentTask(), &task2TCB);
 }
 
-TEST_F(KernelTest, DISABLED_EqualPriorityAppliesRoundRobin_Test)
+TEST_F(KernelTest, EqualPriorityAppliesRoundRobin_Test)
 {
     EXPECT_CALL(*g_MockMemManagement, Malloc(sizeof(struct OS::task_control_block)))
         .Times(1).WillOnce(Return((void*)&task1TCB)).RetiresOnSaturation();
@@ -536,12 +535,20 @@ TEST_F(KernelTest, DISABLED_EqualPriorityAppliesRoundRobin_Test)
         .Times(1).WillOnce(Return((void*)task2Stack)).RetiresOnSaturation();
     kernel->CreateTask(TaskFunction, 0U, OS::Priority::Level_1, "TestTask2", stack_size);
 
+    EXPECT_CALL(mcu, TriggerPendSV()).Times(1).RetiresOnSaturation();
+    HandleTick();
     TriggerScheduler();
     EXPECT_EQ(GetCurrentTask(), &task1TCB);
+    EXPECT_CALL(mcu, TriggerPendSV()).Times(1).RetiresOnSaturation();
+    HandleTick();
     TriggerScheduler();
     EXPECT_EQ(GetCurrentTask(), &task2TCB);
+    EXPECT_CALL(mcu, TriggerPendSV()).Times(1).RetiresOnSaturation();
+    HandleTick();
     TriggerScheduler();
     EXPECT_EQ(GetCurrentTask(), &task1TCB);
+    EXPECT_CALL(mcu, TriggerPendSV()).Times(1).RetiresOnSaturation();
+    HandleTick();
     TriggerScheduler();
     EXPECT_EQ(GetCurrentTask(), &task2TCB);
 }

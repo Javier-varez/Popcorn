@@ -92,6 +92,7 @@ void OS::Kernel::CreateTask(task_func func, uintptr_t arg, enum OS::Priority pri
     tcb->priority = priority;
     tcb->func = func;
     tcb->state = task_state::RUNNABLE;
+    tcb->run_last_timestamp = 0; // never
     strncpy(tcb->name, name, MAX_TASK_NAME);
     LinkedList_AddEntry(task_list, tcb, list);
 }
@@ -167,11 +168,13 @@ void OS::Kernel::RegisterError(struct OS::auto_task_stack_frame* args)
 
 void OS::Kernel::TriggerScheduler()
 {
-    if (current_task &&
-        current_task->state == task_state::RUNNING)
-        current_task->state = task_state::RUNNABLE;
-
     uint64_t ticks = GetTicks();
+
+    if (current_task &&
+        current_task->state == task_state::RUNNING) {
+        current_task->state = task_state::RUNNABLE;
+        current_task->run_last_timestamp = ticks;
+    }
 
     // Select next task based on priority
     current_task = NULL;
@@ -190,10 +193,17 @@ void OS::Kernel::TriggerScheduler()
             tcb->state = task_state::RUNNABLE;
         }
 
-        if ((tcb->state == task_state::RUNNABLE) && 
-            (current_task == NULL || (tcb->priority > current_task->priority)))
+        if (tcb->state == task_state::RUNNABLE)
         {
-            current_task = tcb;
+            if (!current_task || (tcb->priority > current_task->priority))
+            {
+                current_task = tcb;
+            }
+            else if ((tcb->priority == current_task->priority) &&
+                     (tcb->run_last_timestamp < current_task->run_last_timestamp))
+            {
+                current_task = tcb;
+            }
         }
     }
     current_task->state = task_state::RUNNING;

@@ -40,8 +40,8 @@ namespace OS
         // Assembly code relies on the stack_ptr being at
         // offset 0 from the task_control block
         // DO NOT CHANGE!
-        uintptr_t                            stack_ptr;
-        uintptr_t                            arg;
+        std::uintptr_t                       stack_ptr;
+        std::uintptr_t                       arg;
         task_func                            func;
         uintptr_t                            stack_base;
         LinkedList_t                         list;
@@ -49,6 +49,7 @@ namespace OS
         enum task_state                      state;
         char                                 name[MAX_TASK_NAME];
         block_argument                       blockArgument;
+        std::uint64_t                        run_last_timestamp;
     };
 
     struct auto_task_stack_frame
