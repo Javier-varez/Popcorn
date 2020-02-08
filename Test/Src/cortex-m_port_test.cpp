@@ -4,6 +4,7 @@
 #include "gmock/gmock.h"
 
 #include "cortex-m_port.h"
+#include "cortex-m_registers.h"
 #include "syscall_idx.h"
 #include "MockKernel.h"
 
@@ -20,6 +21,7 @@ private:
     {
         mcu = std::make_unique<Hw::MCU>();
         OS::g_kernel = &kernel;
+        Hw::g_SCB = &scb;
     }
 
     void TearDown() override
@@ -34,6 +36,7 @@ protected:
     }
 
     StrictMock<OS::MockKernel> kernel;
+    Hw::SCB_t scb;
     std::unique_ptr<Hw::MCU> mcu;
 };
 

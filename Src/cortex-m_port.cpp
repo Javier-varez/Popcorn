@@ -1,18 +1,13 @@
 
 #include "cortex-m_port.h"
+#include "cortex-m_registers.h"
 #include "os_config.h"
 #include "kernel.h"
-
-#ifndef UNITTEST
-extern "C" {
-// Use proper header for MCU Here
-#include "stm32f103xb.h"
-}
-#endif
 
 namespace Hw
 {
     MCU* g_mcu = nullptr;
+    volatile SCB_t *g_SCB = reinterpret_cast<SCB_t*>(SCB_ADDR);
 
     MCU::MCU() {
         g_mcu = this;
@@ -20,24 +15,20 @@ namespace Hw
 
     void MCU::Initialize()
     {
-        #ifndef UNITTEST
         // Set OS IRQ priorities
-        __NVIC_SetPriority(SysTick_IRQn, 0xFF); // Minimum priority for SysTick
-        __NVIC_SetPriority(PendSV_IRQn,  0xFF); // Minimum priority for PendSV
-        __NVIC_SetPriority(SVCall_IRQn,  0x00); // Maximum priority for SVC
+        g_SCB->SHP[SYSTICK_SHP_IDX] = 0xFF; // Minimum priority for SysTick
+        g_SCB->SHP[PEND_SV_SHP_IDX] = 0xFF; // Minimum priority for PendSV
+        g_SCB->SHP[SVC_CALL_SHP_IDX] = 0x00; // Maximum priority for SVC
 
         // Turn on stack alignment to 8 bytes on exception entry
         // On entry, the stacked value of the XPSR register will have
         // bit 9 set to 1 if the stack was aligned to 8 bytes.
-        SCB->CCR |= SCB_CCR_STKALIGN_Msk;
-        #endif
+        g_SCB->CCR |= SCB_CCR_STKALIGN;
     }
 
     void MCU::TriggerPendSV()
     {
-        #ifndef UNITTEST
-        SCB->ICSR |= SCB_ICSR_PENDSVSET_Msk;
-        #endif
+        g_SCB->ICSR |= SCB_ICSR_PENDSVSET;
     }
 
     void MCU::SupervisorCall(OS::SyscallIdx svc)
