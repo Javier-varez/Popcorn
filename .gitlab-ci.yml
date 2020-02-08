@@ -34,5 +34,14 @@ system-test:
     script:
         - ./ci/run_system_test.sh
 
+size-monitor:
+    image: javiervarez/ate_builder:latest
+    tags:
+        - arm-none-eabi
+        - docker
+    stage: test
+    script:
+        - ./ci/monitor_code_size.sh
+
 variables:
     GIT_SUBMODULE_STRATEGY: recursive
