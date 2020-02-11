@@ -90,6 +90,7 @@ void OS::Kernel::CreateTask(task_func func, uintptr_t arg, enum OS::Priority pri
     tcb->stack_ptr = (uintptr_t)task_stack_ptr;
     tcb->arg  = arg;
     tcb->priority = priority;
+    tcb->base_priority = priority;
     tcb->func = func;
     tcb->state = task_state::RUNNABLE;
     tcb->run_last_timestamp = 0; // never
@@ -158,7 +159,28 @@ void OS::Kernel::Wait(const OS::Blockable* blockable)
     tcb->state = task_state::BLOCKED;
     tcb->blockArgument.blockable = blockable;
 
+    // Perform priority inheritance
+    if (blockable->blocker->priority < current_task->priority)
+    {
+        blockable->blocker->priority = current_task->priority;
+    }
+
     Hw::g_mcu->TriggerPendSV();
+}
+
+void OS::Kernel::Lock(OS::Blockable* blockable, bool acquired)
+{
+    if (acquired)
+    {
+        blockable->blocker = current_task;
+    }
+    else
+    {
+        // Restore original priority of the blocker
+        blockable->blocker->priority = blockable->blocker->base_priority;
+        blockable->blocker = nullptr;
+        Hw::g_mcu->TriggerPendSV();
+    }
 }
 
 void OS::Kernel::RegisterError(struct OS::auto_task_stack_frame* args)

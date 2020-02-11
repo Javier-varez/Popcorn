@@ -2,6 +2,7 @@
 extern "C" {
 #include "cmsis_gcc.h"
 }
+#include "kernel.h"
 
 namespace OS
 {
@@ -26,6 +27,7 @@ namespace OS
             }
         } while (!done);
         __CLREX();
+        LockAcquired();
     }
 
     void Mutex::Unlock()
@@ -43,7 +45,7 @@ namespace OS
             }
         }
         __CLREX();
-        OS::Syscall::Instance().Yield();
+        LockReleased();
     }
 
     bool Mutex::IsBlocked() const {

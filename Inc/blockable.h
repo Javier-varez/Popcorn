@@ -17,6 +17,16 @@ namespace OS
         {
             Syscall::Instance().Wait(*this);
         }
+        void LockAcquired()
+        {
+            Syscall::Instance().Lock(*this, true);
+        }
+        void LockReleased()
+        {
+            Syscall::Instance().Lock(*this, false);
+        }
+        struct task_control_block *blocker;
+        friend class Kernel;
     };
 } // namespace OS
 

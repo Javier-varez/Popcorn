@@ -91,6 +91,9 @@ namespace Hw
         case OS::SyscallIdx::Wait:
             OS::g_kernel->Wait((const OS::Blockable*)args->r1);
             break;
+        case OS::SyscallIdx::Lock:
+            OS::g_kernel->Lock((OS::Blockable*)args->r1, (bool)args->r2);
+            break;
         case OS::SyscallIdx::RegisterError:
         default:
             // TODO: Handle Register Error SVC call and register backtrace

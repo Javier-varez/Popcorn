@@ -46,6 +46,7 @@ namespace OS
         uintptr_t                            stack_base;
         LinkedList_t                         list;
         enum OS::Priority                    priority;
+        enum OS::Priority                    base_priority;
         enum task_state                      state;
         char                                 name[MAX_TASK_NAME];
         block_argument                       blockArgument;
@@ -94,10 +95,14 @@ namespace OS
         TEST_VIRTUAL void Yield();
         TEST_VIRTUAL void Wait(const Blockable* blockable);
         TEST_VIRTUAL void RegisterError(struct auto_task_stack_frame* args);
+        TEST_VIRTUAL void Lock(Blockable* blockable, bool acquired);
 
         TEST_VIRTUAL std::uint64_t GetTicks();
         TEST_VIRTUAL ~Kernel() = default;
 
+        TEST_VIRTUAL task_control_block* GetCurrentTask() {
+            return current_task;
+        };
     private:
         TEST_VIRTUAL void TriggerScheduler();
         TEST_VIRTUAL void HandleTick();

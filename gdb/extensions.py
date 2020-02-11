@@ -2,13 +2,13 @@ from gdb.printing import PrettyPrinter, register_pretty_printer
 import gdb
 
 class TCBPrettyPrinter(object):
-    """Print 'task_control_block'"""
+    """Print 'OS::task_control_block'"""
 
     def __init__(self, val):
         self.val = val
 
     def to_string(self):
-        return ("struct task_control_block:\n"
+        return ("struct OS::task_control_block:\n"
                 "\tName:\t\t%s\n"
                 "\tFunction:\t%s\n"
                 "\tPriority:\t%s\n"
@@ -74,7 +74,7 @@ class CustomPrettyPrinterLocator(PrettyPrinter):
         if typename is None:
             typename = val.type.name
 
-        if typename == "task_control_block":
+        if typename == "OS::task_control_block":
             return TCBPrettyPrinter(val)
 
 if __name__ == "__main__":

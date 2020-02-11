@@ -12,7 +12,8 @@ namespace OS
         DestroyTask,
         Yield,
         Wait,
-        RegisterError
+        RegisterError,
+        Lock
     };
 }
 

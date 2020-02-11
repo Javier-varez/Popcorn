@@ -398,14 +398,20 @@ namespace
         void Lock()
         {
             if (m_blocked)
+            {
                 Block();
+            }
             else
+            {
                 m_blocked = true;
+                LockAcquired();
+            }
         }
 
         void Unlock()
         {
             m_blocked = false;
+            LockReleased();
         }
     private:
         bool m_blocked = false;
@@ -439,6 +445,7 @@ TEST_F(KernelTest, Wait_Test)
         .Times(1).WillOnce(Return((void*)&task2TCB)).RetiresOnSaturation();
     kernel->CreateTask(TaskFunction, 0U, OS::Priority::Level_3, "TestTask2", stack_size);
 
+    EXPECT_CALL(mcu, SupervisorCall(OS::SyscallIdx::Lock));
     block.Lock();
 
     TriggerScheduler();
@@ -452,6 +459,7 @@ TEST_F(KernelTest, Wait_Test)
     TriggerScheduler();
     EXPECT_EQ(GetCurrentTask(), &task1TCB);
 
+    EXPECT_CALL(mcu, SupervisorCall(OS::SyscallIdx::Lock));
     block.Unlock();
 
     TriggerScheduler();
@@ -480,6 +488,7 @@ TEST_F(KernelTest, Priority_Test)
     EXPECT_NE(GetCurrentTask(), nullptr);
     EXPECT_STREQ(GetCurrentTask()->name, "TestTask1");
 
+    EXPECT_CALL(mcu, SupervisorCall(OS::SyscallIdx::Lock));
     block.Lock();
 
     EXPECT_CALL(*g_MockMemManagement, Malloc(sizeof(struct OS::task_control_block)))
@@ -507,6 +516,7 @@ TEST_F(KernelTest, Priority_Test)
     TriggerScheduler();
     EXPECT_EQ(GetCurrentTask(), &task3TCB);
 
+    EXPECT_CALL(mcu, SupervisorCall(OS::SyscallIdx::Lock));
     block.Unlock();
 
     TriggerScheduler();
@@ -553,7 +563,7 @@ TEST_F(KernelTest, EqualPriorityAppliesRoundRobin_Test)
     EXPECT_EQ(GetCurrentTask(), &task2TCB);
 }
 
-TEST_F(KernelTest, DISABLED_PriorityInheritanceAvoidsPriorityInversion_Test)
+TEST_F(KernelTest, PriorityInheritanceAvoidsPriorityInversion_Test)
 {
     FakeBlock mutex;
 
@@ -565,7 +575,9 @@ TEST_F(KernelTest, DISABLED_PriorityInheritanceAvoidsPriorityInversion_Test)
     EXPECT_EQ(GetCurrentTask(), &task1TCB);
 
     // Task 1 takes the mutex
+    EXPECT_CALL(mcu, SupervisorCall(OS::SyscallIdx::Lock));
     mutex.Lock();
+    kernel->Lock(&mutex, true);
 
     CreateTask(OS::Priority::Level_1, task2TCB, task2Stack);
 
@@ -585,11 +597,20 @@ TEST_F(KernelTest, DISABLED_PriorityInheritanceAvoidsPriorityInversion_Test)
 
     // Now task 1 should inherit the priory of task 3 and
     // execute instead of task 2.
+    EXPECT_EQ(task1TCB.priority, task3TCB.priority);
+    EXPECT_EQ(task1TCB.base_priority, OS::Priority::Level_0);
     TriggerScheduler();
     EXPECT_EQ(GetCurrentTask(), &task1TCB);
 
     // Task 1 unlocks the mutex and task 3 resumes execution
+    EXPECT_CALL(mcu, SupervisorCall(OS::SyscallIdx::Lock));
     mutex.Unlock();
+    EXPECT_CALL(mcu, TriggerPendSV());
+    kernel->Lock(&mutex, false);
+    //Priority must be restored
+    EXPECT_EQ(task1TCB.priority, task1TCB.base_priority);
+    EXPECT_EQ(task1TCB.base_priority, OS::Priority::Level_0);
+
     TriggerScheduler();
     EXPECT_EQ(GetCurrentTask(), &task3TCB);
 }

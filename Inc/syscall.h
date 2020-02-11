@@ -35,6 +35,7 @@ namespace OS {
         void StartOS();
         void Yield();
         void RegisterError();
+        void Lock(const Blockable& blockable, bool acquired);
         static Syscall& Instance();
 
     private:

@@ -48,6 +48,11 @@ namespace OS {
         Hw::MCU::SupervisorCall<SyscallIdx::Wait>();
     }
 
+    void Syscall::Lock(const Blockable& blockable, bool acquired)
+    {
+        Hw::MCU::SupervisorCall<SyscallIdx::Lock>();
+    }
+
     void Syscall::RegisterError()
     {
         Hw::MCU::SupervisorCall<SyscallIdx::RegisterError>();

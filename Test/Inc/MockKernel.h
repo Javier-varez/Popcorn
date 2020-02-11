@@ -21,6 +21,7 @@ namespace OS
         MOCK_METHOD0(GetTicks, std::uint64_t());
         MOCK_METHOD0(TriggerScheduler, void());
         MOCK_METHOD0(HandleTick, void());        
+        MOCK_METHOD2(Lock, void(Blockable* Blockable, bool available));
     };
 } // namespace Hw
 

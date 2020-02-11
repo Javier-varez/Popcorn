@@ -164,3 +164,24 @@ TEST_F(MCUTest, HandleSVC_Unknown_Test)
     EXPECT_CALL(kernel, RegisterError(&callStack.frame)).Times(1).RetiresOnSaturation();
     HandleSVC(&callStack.frame);
 }
+
+TEST_F(MCUTest, HandleSVC_Lock_Test)
+{
+    SVC_OP SVC(static_cast<uint8_t>(OS::SyscallIdx::Lock));
+    struct CallStack callStack;
+    callStack.frame.pc = (uint32_t)(&SVC) + sizeof(uint16_t);
+    callStack.frame.xpsr = 0;
+
+    OS::Blockable blockable;
+    callStack.frame.r1 = (uint32_t)&blockable;
+    callStack.frame.r2 = (uint32_t)true;
+
+    EXPECT_CALL(kernel, Lock(&blockable, true)).Times(1).RetiresOnSaturation();
+    HandleSVC(&callStack.frame);
+
+    callStack.frame.r1 = (uint32_t)&blockable;
+    callStack.frame.r2 = (uint32_t)false;
+
+    EXPECT_CALL(kernel, Lock(&blockable, false)).Times(1).RetiresOnSaturation();
+    HandleSVC(&callStack.frame);
+}
