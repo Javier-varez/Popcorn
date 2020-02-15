@@ -9,6 +9,25 @@ void App_SysTick_Hook()
     HAL_IncTick();
 }
 
+void OS::Kernel::TriggerSchedulerEntryHook()
+{
+    // Performance is critical here. That is why
+    // we access the registers directly
+    constexpr std::uint32_t PIN_1 = 1;
+    constexpr std::uint32_t SET_OFFSET = 0;
+
+    GPIOA->BSRR = 1 << (SET_OFFSET + PIN_1); // GPIOA1 = 1
+}
+
+void OS::Kernel::TriggerSchedulerExitHook()
+{
+    // Performance is critical here. That is why
+    // we access the registers directly
+    constexpr std::uint32_t PIN_1 = 1;
+    constexpr std::uint32_t CLEAR_OFFSET = 16;
+    GPIOA->BSRR = 1 << (CLEAR_OFFSET + PIN_1); // GPIOA1 = 0
+}
+
 struct TaskArgs
 {
     const char*     name;
@@ -121,6 +140,14 @@ int main()
 
     HAL_Init();
     ConfigureClk();
+
+    __HAL_RCC_GPIOA_CLK_ENABLE();
+    GPIO_InitTypeDef gpio;
+    gpio.Pin = GPIO_PIN_1;
+    gpio.Mode = GPIO_MODE_OUTPUT_PP;
+    gpio.Pull = GPIO_NOPULL;
+    gpio.Speed = GPIO_SPEED_FREQ_HIGH;
+    HAL_GPIO_Init(GPIOA, &gpio);
 
     OS::Syscall::Instance().CreateTask(InitTask, (uintptr_t)args, OS::Priority::Level_0, "Init task", InitTaskStackSize);
     OS::Syscall::Instance().StartOS();

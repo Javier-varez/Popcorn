@@ -31,18 +31,19 @@ public:
     bool SetNumSamples(std::uint32_t numSamples) const;
     bool GetSampleRate(std::uint32_t &sampleRate) const;
     bool SetSampleRate(std::uint32_t sampleRate);
-    bool SetCaptureSeconds(double seconds) const;
+    bool SetCaptureSeconds(double seconds);
     bool Capture() const;
     bool ExportData(const std::string& filename) const;
     std::vector<SampleData> ParseData(const std::string&  filename) const;
     std::pair<double, double> GetFrequency(const std::vector<SampleData>& samples, const Channels channel) const;
-
+    std::pair<double, double> GetActiveTime(const std::vector<SampleData>& samples, const Channels channel) const;
 private:
     bool ValidateResponse(std::string response) const;
     void SendCommand(const char cmd[], char response[], std::uint32_t rspLen) const;
 
     int fd;
     uint32_t m_sample_rate;
+    double m_sample_time;
 };
 
 #endif

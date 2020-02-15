@@ -106,7 +106,9 @@ namespace OS
     private:
         TEST_VIRTUAL void TriggerScheduler();
         TEST_VIRTUAL void HandleTick();
-
+        TEST_VIRTUAL void TriggerSchedulerEntryHook();
+        TEST_VIRTUAL void TriggerSchedulerExitHook();
+        
         static void TriggerScheduler_Static();
 
         struct task_control_block*  current_task = nullptr;

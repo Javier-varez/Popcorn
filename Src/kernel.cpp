@@ -188,8 +188,19 @@ void OS::Kernel::RegisterError(struct OS::auto_task_stack_frame* args)
     // TODO :: Obtain info and report error
 }
 
+__WEAK void OS::Kernel::TriggerSchedulerEntryHook()
+{
+
+}
+
+__WEAK void OS::Kernel::TriggerSchedulerExitHook()
+{
+
+}
+
 void OS::Kernel::TriggerScheduler()
 {
+    TriggerSchedulerEntryHook();
     uint64_t ticks = GetTicks();
 
     if (current_task &&
@@ -229,6 +240,7 @@ void OS::Kernel::TriggerScheduler()
         }
     }
     current_task->state = task_state::RUNNING;
+    TriggerSchedulerExitHook();
 }
 
 void OS::Kernel::TriggerScheduler_Static()

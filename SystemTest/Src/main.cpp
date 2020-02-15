@@ -119,6 +119,20 @@ static bool ValidateFrequency(std::pair<double, double> freq, double target)
     return true;
 }
 
+static bool ValidateCPUUsage(double usage_mean, double std_dev, double maxMean, double maxDev)
+{
+    if (usage_mean > maxMean)
+    {
+        return false;
+    }
+
+    if (std_dev > maxDev)
+    {
+        return false;
+    }
+    return true;
+}
+
 int main(int argc, char* argv[], char* envp[])
 {
     const char* const Env[] = {
@@ -150,12 +164,15 @@ int main(int argc, char* argv[], char* envp[])
 
     Saleae saleae("127.0.0.1", 10429);
 
-    if (!saleae.SetSampleRate(24000000))
+    constexpr uint64_t sample_rate = 24'000'000;
+    constexpr double capture_seconds = 10.0;
+
+    if (!saleae.SetSampleRate(sample_rate))
     {
         printf("Error setting sample rate\n");
         ExitHandler(-1);
     }
-    if (!saleae.SetCaptureSeconds(10.0))
+    if (!saleae.SetCaptureSeconds(capture_seconds))
     {
         printf("Error setting capture seconds\n");
         ExitHandler(-1);
@@ -187,6 +204,13 @@ int main(int argc, char* argv[], char* envp[])
     if (!ValidateFrequency(freq, 1.0))
     {
         printf("Failed validation for channel 1\n");
+        fail = true;
+    }
+
+    std::pair<double, double> cpu_active_data = saleae.GetActiveTime(samples, Saleae::Channel_2);
+    printf("CPU Usage: %f %%, std_dev = %f\n", cpu_active_data.first * 100.0, cpu_active_data.second);
+    if (!ValidateCPUUsage(cpu_active_data.first, cpu_active_data.second, 0.02, 0.001)) {
+        printf("CPU Usage validation failed\n");
         fail = true;
     }
 

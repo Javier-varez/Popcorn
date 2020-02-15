@@ -109,7 +109,7 @@ bool Saleae::SetSampleRate(std::uint32_t sampleRate)
     return false;
 }
 
-bool Saleae::SetCaptureSeconds(double seconds) const
+bool Saleae::SetCaptureSeconds(double seconds)
 {
     char rsp[1024];
     char cmd[256];
@@ -119,6 +119,7 @@ bool Saleae::SetCaptureSeconds(double seconds) const
     std::string response(rsp);
     if (ValidateResponse(response))
     {
+	m_sample_time = seconds;
         return true;
     }
     return false;
@@ -236,6 +237,41 @@ std::pair<double, double> Saleae::GetFrequency(const std::vector<Saleae::SampleD
     }
 
     return CalculateMeanAndStdDev(frequencyData);
+}
+
+std::pair<double, double> Saleae::GetActiveTime(const std::vector<Saleae::SampleData>& samples, const Saleae::Channels channel) const
+{
+    uint8_t prevState = 0xFF;
+    uint64_t start = 0x0000000000000000ULL;
+    uint64_t end = 0x0000000000000000ULL;
+    std::vector<double> activeData;
+
+    for (auto sample: samples)
+    {
+        uint8_t currentState = sample.data & channel;
+
+        if (sample.timestamp == 0x00)
+        {
+            prevState = sample.data & channel;
+            continue;
+        }
+        else if (currentState != prevState)
+        {
+            if (currentState != 0)
+            {
+                start = sample.timestamp;
+            }
+            else
+            {
+                end = sample.timestamp;
+                activeData.push_back(static_cast<double>(end - start) / m_sample_rate);
+            }
+            prevState = currentState;
+        }
+    }
+    auto retval = CalculateMeanAndStdDev(activeData);
+    retval.first *= activeData.size() / static_cast<double>(m_sample_time);
+    return retval;
 }
 
 void Saleae::SendCommand(const char cmd[], char response[], std::uint32_t rspLen) const
