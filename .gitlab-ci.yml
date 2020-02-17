@@ -43,5 +43,14 @@ size-monitor:
     script:
         - ./ci/monitor_code_size.sh
 
+lint:
+    image: javiervarez/ate_builder:latest
+    tags:
+        - arm-none-eabi
+        - docker
+    stage: build
+    script:
+        - make lint
+
 variables:
     GIT_SUBMODULE_STRATEGY: recursive
