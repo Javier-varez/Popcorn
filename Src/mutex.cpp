@@ -1,27 +1,38 @@
-#include "mutex.h"
+/* 
+ * This file is part of the Cortex-M Scheduler
+ * Copyright (c) 2020 Javier Alvarez
+ * 
+ * This program is free software: you can redistribute it and/or modify  
+ * it under the terms of the GNU General Public License as published by  
+ * the Free Software Foundation, version 3.
+ *
+ * This program is distributed in the hope that it will be useful, but 
+ * WITHOUT ANY WARRANTY; without even the implied warranty of 
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU 
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License 
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ */
+
 extern "C" {
-#include "cmsis_gcc.h"
+#include <stdint.h>
+#include <cmsis_gcc.h>
 }
-#include "kernel.h"
 
-namespace OS
-{
-    Mutex::Mutex() : available(true)
-    {
+#include "Inc/mutex.h"
+#include "Inc/kernel.h"
 
+namespace OS {
+    Mutex::Mutex() : available(true) {
     }
 
-    void Mutex::Lock()
-    {
+    void Mutex::Lock() {
         bool done = false;
-        do
-        {
-            if (__LDREXB(&available))
-            {
+        do {
+            if (__LDREXB(&available)) {
                 done = __STREXB(false, &available) == 0;
-            }
-            else
-            {
+            } else {
                 // Sleep until the lock is free
                 Block();
             }
@@ -30,17 +41,12 @@ namespace OS
         LockAcquired();
     }
 
-    void Mutex::Unlock()
-    {
+    void Mutex::Unlock() {
         bool done = false;
-        while (!done)
-        {
-            if (!__LDREXB(&available))
-            {
+        while (!done) {
+            if (!__LDREXB(&available)) {
                 done = __STREXB(true, &available) == 0;
-            }
-            else
-            {
+            } else {
                 OS::Syscall::Instance().RegisterError();
             }
         }
@@ -54,4 +60,4 @@ namespace OS
         // No exclusive access required
     }
 
-}
+}  // namespace OS

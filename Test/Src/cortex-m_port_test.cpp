@@ -1,37 +1,48 @@
+/* 
+ * This file is part of the Cortex-M Scheduler
+ * Copyright (c) 2020 Javier Alvarez
+ * 
+ * This program is free software: you can redistribute it and/or modify  
+ * it under the terms of the GNU General Public License as published by  
+ * the Free Software Foundation, version 3.
+ *
+ * This program is distributed in the hope that it will be useful, but 
+ * WITHOUT ANY WARRANTY; without even the implied warranty of 
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU 
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License 
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include <memory>
 
 #include "gtest/gtest.h"
 #include "gmock/gmock.h"
 
-#include "cortex-m_port.h"
-#include "cortex-m_registers.h"
-#include "syscall_idx.h"
-#include "MockKernel.h"
+#include "Inc/cortex-m_port.h"
+#include "Inc/cortex-m_registers.h"
+#include "Inc/syscall_idx.h"
+#include "Test/Inc/MockKernel.h"
 
 using ::testing::StrictMock;
 using ::testing::Return;
 using ::testing::AtLeast;
 using ::testing::_;
 
-
-class MCUTest: public ::testing::Test
-{
-private:
-    void SetUp() override
-    {
+class MCUTest: public ::testing::Test {
+ private:
+    void SetUp() override {
         mcu = std::make_unique<Hw::MCU>();
         OS::g_kernel = &kernel;
         Hw::g_SCB = &scb;
     }
 
-    void TearDown() override
-    {
-
+    void TearDown() override {
     }
 
-protected:
-    void HandleSVC(struct OS::auto_task_stack_frame* frame)
-    {
+ protected:
+    void HandleSVC(struct OS::auto_task_stack_frame* frame) {
         mcu->HandleSVC(frame);
     }
 
@@ -40,20 +51,17 @@ protected:
     std::unique_ptr<Hw::MCU> mcu;
 };
 
-struct SVC_OP
-{
+struct SVC_OP {
     uint8_t immediate;
     uint8_t opcode;
-    
-    SVC_OP(uint8_t i)
-    {
+
+    explicit SVC_OP(uint8_t i) {
         immediate = i;
         opcode = 0xDF;
     }
 };
 
-TEST_F(MCUTest, HandleSVC_StartOS_Test)
-{
+TEST_F(MCUTest, HandleSVC_StartOS_Test) {
     SVC_OP StartOS_SVC(static_cast<uint8_t>(OS::SyscallIdx::StartOS));
     struct OS::auto_task_stack_frame frame;
     frame.pc = (uint32_t)(&StartOS_SVC) + sizeof(uint16_t);
@@ -65,14 +73,12 @@ TEST_F(MCUTest, HandleSVC_StartOS_Test)
 
 static void testfunc(void *arg) {}
 
-struct CallStack
-{
+struct CallStack {
     OS::auto_task_stack_frame frame;
     uint32_t data[32];
 };
 
-TEST_F(MCUTest, HandleSVC_CreateTask_Test)
-{
+TEST_F(MCUTest, HandleSVC_CreateTask_Test) {
     SVC_OP CreateTask_SVC(static_cast<uint8_t>(OS::SyscallIdx::CreateTask));
     struct CallStack callStack;
     callStack.frame.pc = (uint32_t)(&CreateTask_SVC) + sizeof(uint16_t);
@@ -89,12 +95,12 @@ TEST_F(MCUTest, HandleSVC_CreateTask_Test)
     callStack.data[0] = (uint32_t)name;
     callStack.data[1] = (uint32_t)stack_size;
 
-    EXPECT_CALL(kernel, CreateTask(testfunc, arg, prio, name, stack_size)).Times(1).RetiresOnSaturation();
+    EXPECT_CALL(kernel, CreateTask(testfunc, arg, prio, name, stack_size))
+        .Times(1).RetiresOnSaturation();
     HandleSVC(&callStack.frame);
 }
 
-TEST_F(MCUTest, HandleSVC_Sleep_Test)
-{
+TEST_F(MCUTest, HandleSVC_Sleep_Test) {
     SVC_OP Sleep_SVC(static_cast<uint8_t>(OS::SyscallIdx::Sleep));
     struct CallStack callStack;
     callStack.frame.pc = (uint32_t)(&Sleep_SVC) + sizeof(uint16_t);
@@ -107,8 +113,7 @@ TEST_F(MCUTest, HandleSVC_Sleep_Test)
     HandleSVC(&callStack.frame);
 }
 
-TEST_F(MCUTest, HandleSVC_DestroyTask_Test)
-{
+TEST_F(MCUTest, HandleSVC_DestroyTask_Test) {
     SVC_OP SVC(static_cast<uint8_t>(OS::SyscallIdx::DestroyTask));
     struct CallStack callStack;
     callStack.frame.pc = (uint32_t)(&SVC) + sizeof(uint16_t);
@@ -118,8 +123,7 @@ TEST_F(MCUTest, HandleSVC_DestroyTask_Test)
     HandleSVC(&callStack.frame);
 }
 
-TEST_F(MCUTest, HandleSVC_Yield_Test)
-{
+TEST_F(MCUTest, HandleSVC_Yield_Test) {
     SVC_OP SVC(static_cast<uint8_t>(OS::SyscallIdx::Yield));
     struct CallStack callStack;
     callStack.frame.pc = (uint32_t)(&SVC) + sizeof(uint16_t);
@@ -129,8 +133,7 @@ TEST_F(MCUTest, HandleSVC_Yield_Test)
     HandleSVC(&callStack.frame);
 }
 
-TEST_F(MCUTest, HandleSVC_Wait_Test)
-{
+TEST_F(MCUTest, HandleSVC_Wait_Test) {
     SVC_OP SVC(static_cast<uint8_t>(OS::SyscallIdx::Wait));
     struct CallStack callStack;
     callStack.frame.pc = (uint32_t)(&SVC) + sizeof(uint16_t);
@@ -143,30 +146,29 @@ TEST_F(MCUTest, HandleSVC_Wait_Test)
     HandleSVC(&callStack.frame);
 }
 
-TEST_F(MCUTest, HandleSVC_RegisterError_Test)
-{
+TEST_F(MCUTest, HandleSVC_RegisterError_Test) {
     SVC_OP SVC(static_cast<uint8_t>(OS::SyscallIdx::RegisterError));
     struct CallStack callStack;
     callStack.frame.pc = (uint32_t)(&SVC) + sizeof(uint16_t);
     callStack.frame.xpsr = 0;
 
-    EXPECT_CALL(kernel, RegisterError(&callStack.frame)).Times(1).RetiresOnSaturation();
+    EXPECT_CALL(kernel, RegisterError(&callStack.frame))
+        .Times(1).RetiresOnSaturation();
     HandleSVC(&callStack.frame);
 }
 
-TEST_F(MCUTest, HandleSVC_Unknown_Test)
-{
+TEST_F(MCUTest, HandleSVC_Unknown_Test) {
     SVC_OP SVC(0xFF);
     struct CallStack callStack;
     callStack.frame.pc = (uint32_t)(&SVC) + sizeof(uint16_t);
     callStack.frame.xpsr = 0;
 
-    EXPECT_CALL(kernel, RegisterError(&callStack.frame)).Times(1).RetiresOnSaturation();
+    EXPECT_CALL(kernel, RegisterError(&callStack.frame))
+        .Times(1).RetiresOnSaturation();
     HandleSVC(&callStack.frame);
 }
 
-TEST_F(MCUTest, HandleSVC_Lock_Test)
-{
+TEST_F(MCUTest, HandleSVC_Lock_Test) {
     SVC_OP SVC(static_cast<uint8_t>(OS::SyscallIdx::Lock));
     struct CallStack callStack;
     callStack.frame.pc = (uint32_t)(&SVC) + sizeof(uint16_t);

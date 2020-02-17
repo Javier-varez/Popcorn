@@ -1,51 +1,59 @@
+/* 
+ * This file is part of the Cortex-M Scheduler
+ * Copyright (c) 2020 Javier Alvarez
+ * 
+ * This program is free software: you can redistribute it and/or modify  
+ * it under the terms of the GNU General Public License as published by  
+ * the Free Software Foundation, version 3.
+ *
+ * This program is distributed in the hope that it will be useful, but 
+ * WITHOUT ANY WARRANTY; without even the implied warranty of 
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU 
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License 
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include "gtest/gtest.h"
 #include "gmock/gmock.h"
 
-#include "linked_list.h"
+#include "Inc/linked_list.h"
 
-struct ListElement
-{
+struct ListElement {
     uint32_t a;
     uint8_t b;
     LinkedList_t list;
 };
 
-class LinkedListTest: public ::testing::Test
-{
-    void SetUp() override
-    {
+class LinkedListTest: public ::testing::Test {
+    void SetUp() override {
         head = nullptr;
     }
 
-    void TearDown() override
-    {
+    void TearDown() override { }
 
-    }
-protected:
+ protected:
     LinkedList_t *head;
 
-    ListElement element1 =
-    {
+    ListElement element1 = {
         .a = 100,
         .b = 200,
         .list = { .next = nullptr }
     };
-    ListElement element2 =
-    {
+    ListElement element2 = {
         .a = 100,
         .b = 200,
         .list = { .next = nullptr }
     };
-    ListElement element3 =
-    {
+    ListElement element3 = {
         .a = 100,
         .b = 12,
         .list = { .next = nullptr }
     };
 };
 
-TEST_F(LinkedListTest, ContainerOfTest)
-{
+TEST_F(LinkedListTest, ContainerOfTest) {
     ListElement element;
 
     LinkedList_t *listPtr = &element.list;
@@ -53,16 +61,14 @@ TEST_F(LinkedListTest, ContainerOfTest)
     ASSERT_EQ(elementPtr, &element);
 }
 
-TEST_F(LinkedListTest, AddElementTest)
-{
+TEST_F(LinkedListTest, AddElementTest) {
     LinkedList_AddElement(&head, &element1.list);
 
     ASSERT_EQ(head, &element1.list);
     ASSERT_EQ(head->next, nullptr);
 }
 
-TEST_F(LinkedListTest, RemoveElementTest)
-{
+TEST_F(LinkedListTest, RemoveElementTest) {
     LinkedList_AddElement(&head, &element1.list);
 
     ASSERT_EQ(head, &element1.list);
@@ -73,8 +79,7 @@ TEST_F(LinkedListTest, RemoveElementTest)
     ASSERT_EQ(head, nullptr);
 }
 
-TEST_F(LinkedListTest, AddMultipleElementsTest)
-{
+TEST_F(LinkedListTest, AddMultipleElementsTest) {
     LinkedList_AddElement(&head, &element1.list);
     LinkedList_AddElement(&head, &element2.list);
 
@@ -83,16 +88,14 @@ TEST_F(LinkedListTest, AddMultipleElementsTest)
     ASSERT_EQ(head->next->next, nullptr);
 }
 
-TEST_F(LinkedListTest, CanRecoverListElement)
-{
+TEST_F(LinkedListTest, CanRecoverListElement) {
     LinkedList_AddElement(&head, &element1.list);
 
     ASSERT_EQ(head, &element1.list);
     ASSERT_EQ(CONTAINER_OF(head, ListElement, list), &element1);
 }
 
-TEST_F(LinkedListTest, CanRemoveRandomElement)
-{
+TEST_F(LinkedListTest, CanRemoveRandomElement) {
     LinkedList_AddElement(&head, &element1.list);
     LinkedList_AddElement(&head, &element2.list);
     LinkedList_AddElement(&head, &element3.list);
@@ -115,8 +118,7 @@ TEST_F(LinkedListTest, CanRemoveRandomElement)
     ASSERT_EQ(head, nullptr);
 }
 
-TEST_F(LinkedListTest, AddEntryTest)
-{
+TEST_F(LinkedListTest, AddEntryTest) {
     LinkedList_AddEntry(head, &element1, list);
     ASSERT_EQ(head, &element1.list);
     ASSERT_EQ(head->next, nullptr);
@@ -127,8 +129,7 @@ TEST_F(LinkedListTest, AddEntryTest)
     ASSERT_EQ(head->next->next, nullptr);
 }
 
-TEST_F(LinkedListTest, RemoveEntryTest)
-{
+TEST_F(LinkedListTest, RemoveEntryTest) {
     LinkedList_AddEntry(head, &element1, list);
     ASSERT_EQ(head, &element1.list);
     ASSERT_EQ(head->next, nullptr);
@@ -146,8 +147,7 @@ TEST_F(LinkedListTest, RemoveEntryTest)
     ASSERT_EQ(head, nullptr);
 }
 
-TEST_F(LinkedListTest, WalkEntryTest)
-{
+TEST_F(LinkedListTest, WalkEntryTest) {
     LinkedList_AddEntry(head, &element1, list);
     LinkedList_AddEntry(head, &element2, list);
     LinkedList_AddEntry(head, &element3, list);
@@ -158,10 +158,8 @@ TEST_F(LinkedListTest, WalkEntryTest)
 
     ListElement* element = nullptr;
     int i = 0;
-    LinkedList_WalkEntry(head, element, list)
-    {
-        switch (i)
-        {
+    LinkedList_WalkEntry(head, element, list) {
+        switch (i) {
         case 0:
             ASSERT_EQ(element, &element1);
             break;
@@ -180,8 +178,7 @@ TEST_F(LinkedListTest, WalkEntryTest)
     ASSERT_EQ(i, 3);
 }
 
-TEST_F(LinkedListTest, WalkEntrySafeTest)
-{
+TEST_F(LinkedListTest, WalkEntrySafeTest) {
     LinkedList_AddEntry(head, &element1, list);
     LinkedList_AddEntry(head, &element2, list);
     LinkedList_AddEntry(head, &element3, list);
@@ -193,10 +190,8 @@ TEST_F(LinkedListTest, WalkEntrySafeTest)
     ListElement* element = nullptr;
     ListElement* next = nullptr;
     int i = 0;
-    LinkedList_WalkEntry_Safe(head, element, next, list)
-    {
-        switch (i)
-        {
+    LinkedList_WalkEntry_Safe(head, element, next, list) {
+        switch (i) {
         case 0:
             ASSERT_EQ(element, &element1);
             ASSERT_EQ(next, &element2);

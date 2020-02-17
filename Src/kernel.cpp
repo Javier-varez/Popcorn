@@ -1,27 +1,44 @@
+/* 
+ * This file is part of the Cortex-M Scheduler
+ * Copyright (c) 2020 Javier Alvarez
+ * 
+ * This program is free software: you can redistribute it and/or modify  
+ * it under the terms of the GNU General Public License as published by  
+ * the Free Software Foundation, version 3.
+ *
+ * This program is distributed in the hope that it will be useful, but 
+ * WITHOUT ANY WARRANTY; without even the implied warranty of 
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU 
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License 
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include <cstddef>
 #include <cstring>
 
-#include "kernel.h"
-#include "cortex-m_port.h"
-#include "memory_management.h"
-#include "critical_section.h"
-#include "syscall_idx.h"
+#include "Inc/kernel.h"
+#include "Inc/cortex-m_port.h"
+#include "Inc/memory_management.h"
+#include "Inc/critical_section.h"
+#include "Inc/syscall_idx.h"
 
-namespace OS
-{
+namespace OS {
     Kernel* g_kernel = nullptr;
 }
 
 // Check the minimum task stack size is larger than the stack frame + alignment
-static_assert(MINIMUM_TASK_STACK_SIZE > (sizeof(OS::task_stack_frame) + sizeof(uint32_t)));
+static_assert(MINIMUM_TASK_STACK_SIZE >
+    (sizeof(OS::task_stack_frame) + sizeof(uint32_t)));
 
-static void* AllocateTaskStack(struct OS::task_control_block *tcb, size_t size)
-{
+static void* AllocateTaskStack(
+    struct OS::task_control_block *tcb,
+    size_t size) {
     void* task_stack_top = NULL;
 
     std::uint8_t* stack = reinterpret_cast<std::uint8_t*>(OsMalloc(size));
-    if (stack != NULL)
-    {
+    if (stack != NULL) {
         tcb->stack_base = (uintptr_t)&stack[0];
         task_stack_top = &stack[size];
     }
@@ -29,10 +46,10 @@ static void* AllocateTaskStack(struct OS::task_control_block *tcb, size_t size)
     return task_stack_top;
 }
 
-static std::uint8_t* AllocateTaskStackFrame(std::uint8_t* stack_ptr)
-{
-    if (stack_ptr == NULL)
+static std::uint8_t* AllocateTaskStackFrame(std::uint8_t* stack_ptr) {
+    if (stack_ptr == NULL) {
         return NULL;
+    }
 
     uintptr_t retval =
         (uintptr_t)(stack_ptr - sizeof(struct OS::auto_task_stack_frame));
@@ -41,49 +58,54 @@ static std::uint8_t* AllocateTaskStackFrame(std::uint8_t* stack_ptr)
     return reinterpret_cast<std::uint8_t*>(retval & 0xfffffff8);
 }
 
-static struct OS::task_stack_frame* AllocateCompleteTaskStackFrame(std::uint8_t* stack_ptr)
-{
+static struct OS::task_stack_frame* AllocateCompleteTaskStackFrame(
+    std::uint8_t* stack_ptr) {
     std::uint8_t* ptr = AllocateTaskStackFrame(stack_ptr);
-    return reinterpret_cast<struct OS::task_stack_frame*>(ptr - sizeof(struct OS::manual_task_stack_frame));
+    return reinterpret_cast<struct OS::task_stack_frame*>(
+        ptr - sizeof(struct OS::manual_task_stack_frame));
 }
 
-void DestroyTaskVeneer()
-{
+void DestroyTaskVeneer() {
     OS::Syscall::Instance().DestroyTask();
 }
 
 static void InitializeTask(
     struct OS::task_stack_frame* stack_frame_ptr,
     task_func func,
-    uintptr_t arg)
-{
+    uintptr_t arg) {
     stack_frame_ptr->autosave.pc = reinterpret_cast<std::uint32_t>(func);
     stack_frame_ptr->autosave.r0 = arg;
     stack_frame_ptr->autosave.xpsr = XPSR_INIT_VALUE;
-    stack_frame_ptr->autosave.lr = (std::uint32_t)DestroyTaskVeneer; // Task return should destroy itself
+    stack_frame_ptr->autosave.lr = (std::uint32_t)DestroyTaskVeneer;
     stack_frame_ptr->manualsave.lr = EXC_RETURN_PSP_UNPRIV;
 }
 
-void OS::Kernel::CreateTask(task_func func, uintptr_t arg, enum OS::Priority priority, const char* name, std::uint32_t stack_size)
-{
-    struct task_control_block* tcb = 
-        (struct task_control_block*)OsMalloc(sizeof(struct task_control_block));
-    if (NULL == tcb)
+void OS::Kernel::CreateTask(task_func func,
+    uintptr_t arg,
+    enum OS::Priority priority,
+    const char* name,
+    std::uint32_t stack_size) {
+    struct task_control_block* tcb = reinterpret_cast<task_control_block*>(
+        OsMalloc(sizeof(struct task_control_block)));
+    if (NULL == tcb) {
         return;
+    }
 
-    stack_size = stack_size < MINIMUM_TASK_STACK_SIZE ? MINIMUM_TASK_STACK_SIZE : stack_size;
+    stack_size = stack_size < MINIMUM_TASK_STACK_SIZE ?
+        MINIMUM_TASK_STACK_SIZE : stack_size;
 
-    void* task_stack_top = AllocateTaskStack(tcb, stack_size);
-    if (task_stack_top == NULL)
-    {
+    std::uint8_t* task_stack_top =
+        reinterpret_cast<std::uint8_t*>(AllocateTaskStack(tcb, stack_size));
+    if (task_stack_top == NULL) {
         OsFree(tcb);
         return;
     }
 
     struct OS::task_stack_frame* task_stack_ptr =
-        AllocateCompleteTaskStackFrame(reinterpret_cast<std::uint8_t*>(task_stack_top));
-    if (NULL == task_stack_ptr)
-        return;    
+        AllocateCompleteTaskStackFrame(task_stack_top);
+    if (NULL == task_stack_ptr) {
+        return;
+    }
 
     InitializeTask(task_stack_ptr, func, arg);
 
@@ -93,34 +115,35 @@ void OS::Kernel::CreateTask(task_func func, uintptr_t arg, enum OS::Priority pri
     tcb->base_priority = priority;
     tcb->func = func;
     tcb->state = task_state::RUNNABLE;
-    tcb->run_last_timestamp = 0; // never
+    tcb->run_last_timestamp = 0;  // never
     strncpy(tcb->name, name, MAX_TASK_NAME);
     LinkedList_AddEntry(task_list, tcb, list);
 }
 
-void IdleTask(void *arg)
-{
+void IdleTask(void *arg) {
     (void)arg;
-    while(1);
+    while (1) { }
 }
 
-void OS::Kernel::StartOS()
-{
+void OS::Kernel::StartOS() {
     // Create Idle Task
-    CreateTask(IdleTask, (uintptr_t)NULL, OS::Priority::IDLE, "Idle", MINIMUM_TASK_STACK_SIZE);
+    CreateTask(
+        IdleTask,
+        static_cast<uintptr_t>(NULL),
+        OS::Priority::IDLE,
+        "Idle",
+        MINIMUM_TASK_STACK_SIZE);
 
     Hw::g_mcu->Initialize();
     Hw::g_mcu->TriggerPendSV();
 }
 
-std::uint64_t OS::Kernel::GetTicks()
-{
+std::uint64_t OS::Kernel::GetTicks() {
     OS::CriticalSection s;
     return ticks;
 }
 
-void OS::Kernel::Sleep(std::uint32_t ticks)
-{
+void OS::Kernel::Sleep(std::uint32_t ticks) {
     struct task_control_block* tcb = current_task;
     tcb->blockArgument.timestamp = ticks + GetTicks();
 
@@ -130,10 +153,10 @@ void OS::Kernel::Sleep(std::uint32_t ticks)
     Hw::g_mcu->TriggerPendSV();
 }
 
-void OS::Kernel::DestroyTask()
-{
-    if (!current_task)
+void OS::Kernel::DestroyTask() {
+    if (!current_task) {
         return;
+    }
 
     struct task_control_block *tcb = current_task;
     // Remove task from task_list and free space
@@ -146,13 +169,11 @@ void OS::Kernel::DestroyTask()
     Hw::g_mcu->TriggerPendSV();
 }
 
-void OS::Kernel::Yield()
-{
+void OS::Kernel::Yield() {
     Hw::g_mcu->TriggerPendSV();
 }
 
-void OS::Kernel::Wait(const OS::Blockable* blockable)
-{
+void OS::Kernel::Wait(const OS::Blockable* blockable) {
     struct task_control_block* tcb = current_task;
 
     // Send task to the blocked state
@@ -160,22 +181,17 @@ void OS::Kernel::Wait(const OS::Blockable* blockable)
     tcb->blockArgument.blockable = blockable;
 
     // Perform priority inheritance
-    if (blockable->blocker->priority < current_task->priority)
-    {
+    if (blockable->blocker->priority < current_task->priority) {
         blockable->blocker->priority = current_task->priority;
     }
 
     Hw::g_mcu->TriggerPendSV();
 }
 
-void OS::Kernel::Lock(OS::Blockable* blockable, bool acquired)
-{
-    if (acquired)
-    {
+void OS::Kernel::Lock(OS::Blockable* blockable, bool acquired) {
+    if (acquired) {
         blockable->blocker = current_task;
-    }
-    else
-    {
+    } else {
         // Restore original priority of the blocker
         blockable->blocker->priority = blockable->blocker->base_priority;
         blockable->blocker = nullptr;
@@ -183,23 +199,17 @@ void OS::Kernel::Lock(OS::Blockable* blockable, bool acquired)
     }
 }
 
-void OS::Kernel::RegisterError(struct OS::auto_task_stack_frame* args)
-{
-    // TODO :: Obtain info and report error
+void OS::Kernel::RegisterError(struct OS::auto_task_stack_frame* args) {
+    // TODO(javier_varez) :: Obtain info and report error
 }
 
-__WEAK void OS::Kernel::TriggerSchedulerEntryHook()
-{
-
+__WEAK void OS::Kernel::TriggerSchedulerEntryHook() {
 }
 
-__WEAK void OS::Kernel::TriggerSchedulerExitHook()
-{
-
+__WEAK void OS::Kernel::TriggerSchedulerExitHook() {
 }
 
-void OS::Kernel::TriggerScheduler()
-{
+void OS::Kernel::TriggerScheduler() {
     TriggerSchedulerEntryHook();
     uint64_t ticks = GetTicks();
 
@@ -212,29 +222,21 @@ void OS::Kernel::TriggerScheduler()
     // Select next task based on priority
     current_task = NULL;
     struct task_control_block* tcb = NULL;
-    LinkedList_WalkEntry(task_list, tcb, list)
-    {
+    LinkedList_WalkEntry(task_list, tcb, list) {
         // Resume task if asleep/blocked
         if ((tcb->state == task_state::SLEEPING) &&
-            (ticks >= tcb->blockArgument.timestamp))
-        {
+            (ticks >= tcb->blockArgument.timestamp)) {
             tcb->state = task_state::RUNNABLE;
-        }
-        else if ((tcb->state == task_state::BLOCKED) &&
-                 !tcb->blockArgument.blockable->IsBlocked())
-        {
+        } else if ((tcb->state == task_state::BLOCKED) &&
+                 !tcb->blockArgument.blockable->IsBlocked()) {
             tcb->state = task_state::RUNNABLE;
         }
 
-        if (tcb->state == task_state::RUNNABLE)
-        {
-            if (!current_task || (tcb->priority > current_task->priority))
-            {
+        if (tcb->state == task_state::RUNNABLE) {
+            if (!current_task || (tcb->priority > current_task->priority)) {
                 current_task = tcb;
-            }
-            else if ((tcb->priority == current_task->priority) &&
-                     (tcb->run_last_timestamp < current_task->run_last_timestamp))
-            {
+            } else if ((tcb->priority == current_task->priority) &&
+                (tcb->run_last_timestamp < current_task->run_last_timestamp)) {
                 current_task = tcb;
             }
         }
@@ -243,33 +245,26 @@ void OS::Kernel::TriggerScheduler()
     TriggerSchedulerExitHook();
 }
 
-void OS::Kernel::TriggerScheduler_Static()
-{
+void OS::Kernel::TriggerScheduler_Static() {
     g_kernel->TriggerScheduler();
 }
 
-void OS::Kernel::HandleTick()
-{
+void OS::Kernel::HandleTick() {
     OS::CriticalSection s;
     ticks++;
     Hw::g_mcu->TriggerPendSV();
 }
 
-OS::Kernel::Kernel()
-{
+OS::Kernel::Kernel() {
     OS::g_kernel = this;
 }
 
-__attribute__((weak)) void App_SysTick_Hook()
-{
-
+__attribute__((weak)) void App_SysTick_Hook() {
 }
 
-CLINKAGE void SysTick_Handler()
-{
+CLINKAGE void SysTick_Handler() {
     App_SysTick_Hook();
-    if (OS::g_kernel)
-    {
+    if (OS::g_kernel) {
         OS::g_kernel->HandleTick();
     }
 }

@@ -1,25 +1,39 @@
-#ifndef UNIQUE_LOCK_H_
-#define UNIQUE_LOCK_H_
+/* 
+ * This file is part of the Cortex-M Scheduler
+ * Copyright (c) 2020 Javier Alvarez
+ * 
+ * This program is free software: you can redistribute it and/or modify  
+ * it under the terms of the GNU General Public License as published by  
+ * the Free Software Foundation, version 3.
+ *
+ * This program is distributed in the hope that it will be useful, but 
+ * WITHOUT ANY WARRANTY; without even the implied warranty of 
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU 
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License 
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ */
 
-namespace OS
-{
-    template<class T>
-    class UniqueLock
-    {
-    public:
-        explicit inline UniqueLock(T& mutex) :
-            m_mutex(mutex)
-        {
-            m_mutex.Lock();
-        }
+#ifndef INC_UNIQUE_LOCK_H_
+#define INC_UNIQUE_LOCK_H_
 
-        inline ~UniqueLock()
-        {
-            m_mutex.Unlock();
-        }
-    private:
-        T& m_mutex;
-    };
-}
+namespace OS {
+template<class T>
+class UniqueLock {
+ public:
+    explicit inline UniqueLock(T& mutex) : // NOLINT
+        m_mutex(mutex) {
+        m_mutex.Lock();
+    }
 
-#endif
+    inline ~UniqueLock() {
+        m_mutex.Unlock();
+    }
+
+ private:
+    T& m_mutex;
+};
+}  // namespace OS
+
+#endif  // INC_UNIQUE_LOCK_H_

@@ -1,6 +1,22 @@
+/* 
+ * This file is part of the Cortex-M Scheduler
+ * Copyright (c) 2020 Javier Alvarez
+ * 
+ * This program is free software: you can redistribute it and/or modify  
+ * it under the terms of the GNU General Public License as published by  
+ * the Free Software Foundation, version 3.
+ *
+ * This program is distributed in the hope that it will be useful, but 
+ * WITHOUT ANY WARRANTY; without even the implied warranty of 
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU 
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License 
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ */
 
-#ifndef LINKED_LIST_H_
-#define LINKED_LIST_H_
+#ifndef INC_LINKED_LIST_H_
+#define INC_LINKED_LIST_H_
 
 #include <stddef.h>
 
@@ -13,7 +29,7 @@ typedef struct LinkedList {
 } LinkedList_t;
 
 #define CONTAINER_OF(ptr, obj, member) \
-    ((obj *)((ptr == NULL) ? NULL : (((uint8_t*)ptr) - offsetof(obj, member))))
+    ((obj*)((ptr == NULL) ? NULL : (((uint8_t*)ptr) - offsetof(obj, member))))  // NOLINT
 
 #define LinkedList_NextEntry(element, obj, member) \
     ((element == NULL) ? NULL : CONTAINER_OF(element->member.next, obj, member))
@@ -43,4 +59,4 @@ void LinkedList_AddElement(LinkedList_t** head, LinkedList_t* element);
 }
 #endif
 
-#endif // LINKED_LIST_H_
+#endif  // INC_LINKED_LIST_H_

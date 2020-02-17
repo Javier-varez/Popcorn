@@ -34,6 +34,7 @@ LOCAL_CROSS_COMPILE := arm-none-eabi-
 LOCAL_NAME := stm32f1_fw.elf
 LOCAL_CFLAGS := \
 	$(TARGET_CFLAGS) \
+	-I$(LOCAL_DIR)/. \
 	-I$(LOCAL_DIR)/Inc
 LOCAL_CXXFLAGS := \
 	$(LOCAL_CFLAGS) \

@@ -1,6 +1,22 @@
+/* 
+ * This file is part of the Cortex-M Scheduler
+ * Copyright (c) 2020 Javier Alvarez
+ * 
+ * This program is free software: you can redistribute it and/or modify  
+ * it under the terms of the GNU General Public License as published by  
+ * the Free Software Foundation, version 3.
+ *
+ * This program is distributed in the hope that it will be useful, but 
+ * WITHOUT ANY WARRANTY; without even the implied warranty of 
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU 
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License 
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ */
 
-#ifndef MEMORY_MANAGEMENT_H_
-#define MEMORY_MANAGEMENT_H_
+#ifndef INC_MEMORY_MANAGEMENT_H_
+#define INC_MEMORY_MANAGEMENT_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -18,4 +34,4 @@ void OsFree(void* ptr);
 }
 #endif
 
-#endif // MEMORY_MANAGEMENT_H_
+#endif  // INC_MEMORY_MANAGEMENT_H_
