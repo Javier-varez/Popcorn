@@ -15,8 +15,8 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef INC_SYSCALL_H_
-#define INC_SYSCALL_H_
+#ifndef OS_INC_SYSCALL_H_
+#define OS_INC_SYSCALL_H_
 
 #include <cstdint>
 
@@ -64,4 +64,4 @@ class Syscall {
 };
 }  // namespace OS
 
-#endif  // INC_SYSCALL_H_
+#endif  // OS_INC_SYSCALL_H_

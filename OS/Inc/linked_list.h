@@ -15,8 +15,8 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef INC_LINKED_LIST_H_
-#define INC_LINKED_LIST_H_
+#ifndef OS_INC_LINKED_LIST_H_
+#define OS_INC_LINKED_LIST_H_
 
 #include <stddef.h>
 
@@ -59,4 +59,4 @@ void LinkedList_AddElement(LinkedList_t** head, LinkedList_t* element);
 }
 #endif
 
-#endif  // INC_LINKED_LIST_H_
+#endif  // OS_INC_LINKED_LIST_H_

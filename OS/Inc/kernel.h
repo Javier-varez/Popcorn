@@ -15,8 +15,8 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef INC_KERNEL_H_
-#define INC_KERNEL_H_
+#ifndef OS_INC_KERNEL_H_
+#define OS_INC_KERNEL_H_
 
 #include "Inc/platform.h"
 #include "Inc/blockable.h"
@@ -137,4 +137,4 @@ class Kernel {
 extern Kernel *g_kernel;
 }  // namespace OS
 
-#endif  // INC_KERNEL_H_
+#endif  // OS_INC_KERNEL_H_

@@ -26,6 +26,7 @@ include $(CLEAR_VARS)
 LOCAL_NAME := TestOS
 LOCAL_CFLAGS := \
 	-I$(LOCAL_DIR)/../ \
+	-I$(LOCAL_DIR)/../OS \
 	-I$(GOOGLEMOCK_INCLUDE_DIR) \
 	-I$(GOOGLETEST_INCLUDE_DIR) \
 	-DUNITTEST \
@@ -37,10 +38,10 @@ LOCAL_CFLAGS := \
 LOCAL_CXXFLAGS := \
 	$(LOCAL_CFLAGS)
 TEST_SRC := \
-	$(LOCAL_DIR)/../Src/syscalls.cpp \
-	$(LOCAL_DIR)/../Src/cortex-m_port.cpp \
-	$(LOCAL_DIR)/../Src/kernel.cpp \
-	$(LOCAL_DIR)/../Src/linked_list.c
+	$(LOCAL_DIR)/../OS/Src/syscalls.cpp \
+	$(LOCAL_DIR)/../OS/Src/cortex-m_port.cpp \
+	$(LOCAL_DIR)/../OS/Src/kernel.cpp \
+	$(LOCAL_DIR)/../OS/Src/linked_list.c
 
 LOCAL_SRC := \
 	$(TEST_SRC) \

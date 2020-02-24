@@ -15,26 +15,24 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef INC_CRITICAL_SECTION_H_
-#define INC_CRITICAL_SECTION_H_
+#ifndef OS_INC_MUTEX_H_
+#define OS_INC_MUTEX_H_
+
+#include <cstdint>
+
+#include "Inc/blockable.h"
 
 namespace OS {
-class CriticalSection {
+class Mutex: Blockable {
  public:
-    // These instructions set the PRIMASK register,
-    // Masking all Interrupts but the hardfault and NMI
-    inline CriticalSection() {
-        #ifndef UNITTEST
-        asm volatile("cpsid i");
-        #endif
-    }
+    Mutex();
+    void Lock();
+    void Unlock();
 
-    inline ~CriticalSection() {
-        #ifndef UNITTEST
-        asm volatile("cpsie i");
-        #endif
-    }
+ private:
+    std::uint8_t available;
+    bool IsBlocked() const override;
 };
 }  // namespace OS
 
-#endif  // INC_CRITICAL_SECTION_H_
+#endif  // OS_INC_MUTEX_H_

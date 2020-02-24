@@ -15,23 +15,21 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef INC_MEMORY_MANAGEMENT_H_
-#define INC_MEMORY_MANAGEMENT_H_
+#ifndef OS_INC_SPINLOCK_H_
+#define OS_INC_SPINLOCK_H_
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#include <cstdint>
 
-#include <stddef.h>
-#include <stdint.h>
+namespace OS {
+class SpinLock {
+ public:
+    SpinLock();
+    void Lock();
+    void Unlock();
 
-#define MEMORY_POOL_SIZE        (4096)
+ private:
+    std::uint8_t available;
+};
+}  // namespace OS
 
-void* OsMalloc(size_t size);
-void OsFree(void* ptr);
-
-#ifdef __cplusplus
-}
-#endif
-
-#endif  // INC_MEMORY_MANAGEMENT_H_
+#endif  // OS_INC_SPINLOCK_H_

@@ -74,11 +74,12 @@ void Reset_Handler() {
         while (true) {} \
     }
 
+extern "C" void SVC_Handler();
+extern "C" void PendSV_Handler();
+extern "C" void SysTick_Handler();
+
 DEFINE_DEFAULT_ISR(defaultISR)
 DEFINE_DEFAULT_ISR(HardFault_Handler)
-DEFINE_DEFAULT_ISR(SVC_Handler)
-DEFINE_DEFAULT_ISR(PendSV_Handler)
-DEFINE_DEFAULT_ISR(SysTick_Handler)
 
 extern std::uintptr_t g_pfnVectors[];
 std::uintptr_t g_pfnVectors[]

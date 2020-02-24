@@ -15,20 +15,25 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef INC_SYSCALL_IDX_H_
-#define INC_SYSCALL_IDX_H_
+#ifndef OS_INC_UNIQUE_LOCK_H_
+#define OS_INC_UNIQUE_LOCK_H_
 
 namespace OS {
-enum class SyscallIdx {
-    StartOS,
-    CreateTask,
-    Sleep,
-    DestroyTask,
-    Yield,
-    Wait,
-    RegisterError,
-    Lock
+template<class T>
+class UniqueLock {
+ public:
+    explicit inline UniqueLock(T& mutex) : // NOLINT
+        m_mutex(mutex) {
+        m_mutex.Lock();
+    }
+
+    inline ~UniqueLock() {
+        m_mutex.Unlock();
+    }
+
+ private:
+    T& m_mutex;
 };
 }  // namespace OS
 
-#endif  // INC_SYSCALL_IDX_H_
+#endif  // OS_INC_UNIQUE_LOCK_H_

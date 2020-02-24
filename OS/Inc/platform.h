@@ -15,10 +15,20 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef INC_OS_CONFIG_H_
-#define INC_OS_CONFIG_H_
+#ifndef OS_INC_PLATFORM_H_
+#define OS_INC_PLATFORM_H_
 
-constexpr std::uint32_t MINIMUM_TASK_STACK_SIZE = 256;
-constexpr std::uint32_t MAX_TASK_NAME = 10;
+#include <cstdint>
 
-#endif  // INC_OS_CONFIG_H_
+#define CLINKAGE                    extern "C"
+#define __STRINGIZE(_x)             #_x
+#define __NAKED                     __attribute__((naked))
+#define __WEAK                      __attribute__((weak))
+
+#ifdef UNITTEST
+#define TEST_VIRTUAL virtual
+#else
+#define TEST_VIRTUAL
+#endif
+
+#endif  // OS_INC_PLATFORM_H_

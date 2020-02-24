@@ -15,20 +15,26 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef INC_PLATFORM_H_
-#define INC_PLATFORM_H_
+#ifndef OS_INC_CRITICAL_SECTION_H_
+#define OS_INC_CRITICAL_SECTION_H_
 
-#include <cstdint>
+namespace OS {
+class CriticalSection {
+ public:
+    // These instructions set the PRIMASK register,
+    // Masking all Interrupts but the hardfault and NMI
+    inline CriticalSection() {
+        #ifndef UNITTEST
+        asm volatile("cpsid i");
+        #endif
+    }
 
-#define CLINKAGE                    extern "C"
-#define __STRINGIZE(_x)             #_x
-#define __NAKED                     __attribute__((naked))
-#define __WEAK                      __attribute__((weak))
+    inline ~CriticalSection() {
+        #ifndef UNITTEST
+        asm volatile("cpsie i");
+        #endif
+    }
+};
+}  // namespace OS
 
-#ifdef UNITTEST
-#define TEST_VIRTUAL virtual
-#else
-#define TEST_VIRTUAL
-#endif
-
-#endif  // INC_PLATFORM_H_
+#endif  // OS_INC_CRITICAL_SECTION_H_

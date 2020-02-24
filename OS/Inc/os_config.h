@@ -15,21 +15,10 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef INC_SPINLOCK_H_
-#define INC_SPINLOCK_H_
+#ifndef OS_INC_OS_CONFIG_H_
+#define OS_INC_OS_CONFIG_H_
 
-#include <cstdint>
+constexpr std::uint32_t MINIMUM_TASK_STACK_SIZE = 256;
+constexpr std::uint32_t MAX_TASK_NAME = 10;
 
-namespace OS {
-class SpinLock {
- public:
-    SpinLock();
-    void Lock();
-    void Unlock();
-
- private:
-    std::uint8_t available;
-};
-}  // namespace OS
-
-#endif  // INC_SPINLOCK_H_
+#endif  // OS_INC_OS_CONFIG_H_

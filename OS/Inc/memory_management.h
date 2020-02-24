@@ -15,24 +15,23 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef INC_MUTEX_H_
-#define INC_MUTEX_H_
+#ifndef OS_INC_MEMORY_MANAGEMENT_H_
+#define OS_INC_MEMORY_MANAGEMENT_H_
 
-#include <cstdint>
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-#include "Inc/blockable.h"
+#include <stddef.h>
+#include <stdint.h>
 
-namespace OS {
-class Mutex: Blockable {
- public:
-    Mutex();
-    void Lock();
-    void Unlock();
+#define MEMORY_POOL_SIZE        (4096)
 
- private:
-    std::uint8_t available;
-    bool IsBlocked() const override;
-};
-}  // namespace OS
+void* OsMalloc(size_t size);
+void OsFree(void* ptr);
 
-#endif  // INC_MUTEX_H_
+#ifdef __cplusplus
+}
+#endif
+
+#endif  // OS_INC_MEMORY_MANAGEMENT_H_

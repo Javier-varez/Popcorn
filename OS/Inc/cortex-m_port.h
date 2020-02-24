@@ -15,8 +15,8 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef INC_CORTEX_M_PORT_H_
-#define INC_CORTEX_M_PORT_H_
+#ifndef OS_INC_CORTEX_M_PORT_H_
+#define OS_INC_CORTEX_M_PORT_H_
 
 #include "Inc/platform.h"
 #include "Inc/syscall_idx.h"
@@ -60,4 +60,4 @@ class MCU {
 };
 }  // namespace Hw
 
-#endif  // INC_CORTEX_M_PORT_H_
+#endif  // OS_INC_CORTEX_M_PORT_H_

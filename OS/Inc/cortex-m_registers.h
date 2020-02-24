@@ -15,8 +15,8 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef INC_CORTEX_M_REGISTERS_H_
-#define INC_CORTEX_M_REGISTERS_H_
+#ifndef OS_INC_CORTEX_M_REGISTERS_H_
+#define OS_INC_CORTEX_M_REGISTERS_H_
 
 #include <cstdint>
 
@@ -55,4 +55,4 @@ struct SCB_t {
 extern volatile SCB_t *g_SCB;
 }  // namespace Hw
 
-#endif  // INC_CORTEX_M_REGISTERS_H_
+#endif  // OS_INC_CORTEX_M_REGISTERS_H_

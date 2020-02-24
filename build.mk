@@ -3,25 +3,6 @@ LOCAL_DIR := $(call current-dir)
 CC := gcc
 CXX := g++
 
-PREREQUISITES_OK := true
-ARM_GCC_VERSION := 9.2.1
-
-GLOBAL_CFLAGS := \
-	-Os \
-	-g3 \
-	-Wall \
-	-Werror \
-	-ffunction-sections \
-	-fdata-sections
-
-INSTALLED_ARM_GCC_VERSION := \
-	$(strip $(shell arm-none-eabi-gcc -dumpversion))
-ifneq ($(INSTALLED_ARM_GCC_VERSION), $(ARM_GCC_VERSION))
-$(warning arm-none-eabi-gcc doesn't match version $(ARM_GCC_VERSION). Detected: $(INSTALLED_ARM_GCC_VERSION))
-$(warning skipping build for target)
-PREREQUISITES_OK := false
-endif
-
 ifeq ($(PREREQUISITES_OK),true)
 TARGET_CFLAGS := \
 	-mthumb \
@@ -50,7 +31,7 @@ LOCAL_LINKER_FILE := \
 LOCAL_SRC := \
 	$(wildcard $(LOCAL_DIR)/Src/*.c) \
 	$(wildcard $(LOCAL_DIR)/Src/*.cpp)
-LOCAL_STATIC_LIBS := libstm32cubef1
+LOCAL_STATIC_LIBS := libstm32cubef1 libos
 include $(BUILD_BINARY)
 
 include $(CLEAR_VARS)

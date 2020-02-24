@@ -15,32 +15,20 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef INC_BLOCKABLE_H_
-#define INC_BLOCKABLE_H_
-
-#include "Inc/syscall.h"
+#ifndef OS_INC_SYSCALL_IDX_H_
+#define OS_INC_SYSCALL_IDX_H_
 
 namespace OS {
-// Mutex, lists, etc, must be sublcass of Blockable
-class Blockable {
- public:
-    virtual bool IsBlocked() const {
-        return false;
-    }
-
- protected:
-    void Block() {
-        Syscall::Instance().Wait(*this);
-    }
-    void LockAcquired() {
-        Syscall::Instance().Lock(*this, true);
-    }
-    void LockReleased() {
-        Syscall::Instance().Lock(*this, false);
-    }
-    struct task_control_block *blocker;
-    friend class Kernel;
+enum class SyscallIdx {
+    StartOS,
+    CreateTask,
+    Sleep,
+    DestroyTask,
+    Yield,
+    Wait,
+    RegisterError,
+    Lock
 };
 }  // namespace OS
 
-#endif  // INC_BLOCKABLE_H_
+#endif  // OS_INC_SYSCALL_IDX_H_
