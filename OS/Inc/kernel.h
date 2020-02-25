@@ -123,6 +123,13 @@ class Kernel {
     TEST_VIRTUAL void HandleTick();
     TEST_VIRTUAL void TriggerSchedulerEntryHook();
     TEST_VIRTUAL void TriggerSchedulerExitHook();
+    TEST_VIRTUAL void HandleErrorHook(
+        uint32_t pc,
+        uint32_t r0,
+        uint32_t r1,
+        uint32_t r2,
+        uint32_t r3,
+        uint32_t sp);
 
     static void TriggerScheduler_Static();
 

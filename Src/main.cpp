@@ -16,10 +16,16 @@
  */
 
 #include <stm32f1xx_hal.h>
+#include <memory>
+
 #include "Inc/syscall.h"
 #include "Inc/mutex.h"
 #include "Inc/unique_lock.h"
 #include "Inc/cortex-m_port.h"
+
+#include "Inc/uart.h"
+
+App::Uart uart;
 
 void App_SysTick_Hook() {
     HAL_IncTick();
@@ -40,6 +46,19 @@ void OS::Kernel::TriggerSchedulerExitHook() {
     constexpr std::uint32_t PIN_1 = 1;
     constexpr std::uint32_t CLEAR_OFFSET = 16;
     GPIOA->BSRR = 1 << (CLEAR_OFFSET + PIN_1);  // GPIOA1 = 0
+}
+
+void OS::Kernel::HandleErrorHook(
+    uint32_t pc,
+    uint32_t r0,
+    uint32_t r1,
+    uint32_t r2,
+    uint32_t r3,
+    uint32_t sp) {
+    constexpr uint32_t kStrLength = 100;
+    char buf[kStrLength];
+    std::snprintf(buf, kStrLength, "Error detected at pc 0x%08lx", pc);
+    uart.Send(buf);
 }
 
 struct TaskArgs {
@@ -152,6 +171,10 @@ int main() {
 
     HAL_Init();
     ConfigureClk();
+    uart.Init();
+
+    const char initStr[] = "STM32F1 Is alive!\r\n";
+    uart.Send(initStr);
 
     __HAL_RCC_GPIOA_CLK_ENABLE();
     GPIO_InitTypeDef gpio;

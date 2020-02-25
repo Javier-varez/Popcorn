@@ -200,13 +200,24 @@ void OS::Kernel::Lock(OS::Blockable* blockable, bool acquired) {
 }
 
 void OS::Kernel::RegisterError(struct OS::auto_task_stack_frame* args) {
-    // TODO(javier_varez) :: Obtain info and report error
+    uint32_t pc = args->lr;
+    uint32_t sp = reinterpret_cast<uint32_t>(args + 1);
+    HandleErrorHook(pc, args->r0, args->r1, args->r2, args->r3, sp);
 }
 
 __WEAK void OS::Kernel::TriggerSchedulerEntryHook() {
 }
 
 __WEAK void OS::Kernel::TriggerSchedulerExitHook() {
+}
+
+__WEAK void OS::Kernel::HandleErrorHook(
+    uint32_t pc,
+    uint32_t r0,
+    uint32_t r1,
+    uint32_t r2,
+    uint32_t r3,
+    uint32_t sp) {
 }
 
 void OS::Kernel::TriggerScheduler() {
@@ -241,7 +252,11 @@ void OS::Kernel::TriggerScheduler() {
             }
         }
     }
-    current_task->state = task_state::RUNNING;
+
+    if (current_task != nullptr) {
+        current_task->state = task_state::RUNNING;
+    }
+
     TriggerSchedulerExitHook();
 }
 

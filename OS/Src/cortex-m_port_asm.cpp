@@ -25,16 +25,17 @@ CLINKAGE __NAKED void PendSV_Handler() {
         "               mrs r0, psp                       \n"
         "               stmdb r0!, {r4-r11, r14}          \n"
         "               str r0, [r1]                      \n" // scheduler.current_task->stack_ptr = psp
-        "TaskSwitch:    push {%[current_task_ptr]}        \n"
+        "TaskSwitch:    push {%[current_task_ptr], lr}    \n"
         "               blx %[TriggerScheduler]           \n"
-        "               pop {%[current_task_ptr]}         \n"
+        "               pop {%[current_task_ptr], lr}     \n"
         "               ldr r1, [%[current_task_ptr]]     \n"
+        "               cbz r1, RetISR                    \n"
         "               ldr r0, [r1]                      \n"
         "               ldmia r0!, {r4-r11, r14}          \n"
         "               msr psp, r0                       \n" // psp = scheduler.current_task->stack_ptr
         "               isb                               \n"
         "               mov lr, %[exc_return]             \n"
-        "               bx lr                             \n"
+        "RetISR:        bx lr                             \n"
         : : 
         [current_task_ptr] "r" (&OS::g_kernel->current_task),
         [exc_return] "i" (EXC_RETURN_PSP_UNPRIV),
