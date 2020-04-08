@@ -56,8 +56,8 @@ class KernelTest: public ::testing::Test {
     }
 
  protected:
-    LinkedList_t* GetTaskList() {
-        return kernel->task_list;
+    LinkedList_t* GetReadyTaskList() {
+        return kernel->ready_list;
     }
 
     struct OS::task_control_block* GetCurrentTask() {
@@ -148,7 +148,7 @@ TEST_F(KernelTest, CreateTaskInitializesTCB_Test) {
         "NewTask",
         kStackSize);
 
-    ASSERT_EQ(CONTAINER_OF(GetTaskList(), OS::task_control_block, list),
+    ASSERT_EQ(CONTAINER_OF(GetReadyTaskList(), OS::task_control_block, list),
         &task1TCB);
     ASSERT_STREQ(task1TCB.name, "NewTask");
     ASSERT_EQ(task1TCB.state, OS::task_state::READY);
@@ -198,7 +198,7 @@ TEST_F(KernelTest, StartOS_Test) {
 
     kernel->StartOS();
 
-    ASSERT_EQ(CONTAINER_OF(GetTaskList(), OS::task_control_block, list),
+    ASSERT_EQ(CONTAINER_OF(GetReadyTaskList(), OS::task_control_block, list),
         &idleTCB);
     ASSERT_STREQ(idleTCB.name, "Idle");
     ASSERT_EQ(idleTCB.state, OS::task_state::READY);
@@ -240,7 +240,7 @@ TEST_F(KernelTest, CreateTask_Test) {
 
     int i = 0;
     struct OS::task_control_block* tcb = nullptr;
-    LinkedList_WalkEntry(GetTaskList(), tcb, list) {
+    LinkedList_WalkEntry(GetReadyTaskList(), tcb, list) {
         OS::task_control_block* expected_tcb = nullptr;
         switch (i) {
         case 0:
@@ -267,7 +267,7 @@ TEST_F(KernelTest, CreateTask_MallocFail_Test) {
                        OS::Priority::Level_3,
                        "Nulltask",
                        MINIMUM_TASK_STACK_SIZE);
-    EXPECT_EQ(GetTaskList(), nullptr);
+    EXPECT_EQ(GetReadyTaskList(), nullptr);
 }
 
 TEST_F(KernelTest, DestroyTask_Test) {
@@ -294,7 +294,8 @@ TEST_F(KernelTest, DestroyTask_Test) {
                        kStackSize);
 
     // Set first task as current task
-    SetCurrentTask(CONTAINER_OF(GetTaskList(), OS::task_control_block, list));
+    SetCurrentTask(CONTAINER_OF(GetReadyTaskList(),
+                   OS::task_control_block, list));
 
     EXPECT_CALL(memManagement, Free(task1Stack))
         .Times(1).RetiresOnSaturation();
@@ -305,7 +306,7 @@ TEST_F(KernelTest, DestroyTask_Test) {
 
     int i = 0;
     struct OS::task_control_block* tcb = nullptr;
-    LinkedList_WalkEntry(GetTaskList(), tcb, list) {
+    LinkedList_WalkEntry(GetReadyTaskList(), tcb, list) {
         struct OS::task_control_block *expected_tcb = nullptr;
         switch (i) {
         case 0:

@@ -130,12 +130,15 @@ class Kernel {
         uint32_t r2,
         uint32_t r3,
         uint32_t sp);
+    TEST_VIRTUAL void CheckTaskNeedsAwakening();
 
     static void TriggerScheduler_Static();
 
-    struct task_control_block*  current_task = nullptr;
-    LinkedList_t*               task_list    = nullptr;
-    std::uint64_t               ticks        = 0;
+    struct task_control_block*  current_task  = nullptr;
+    LinkedList_t*               ready_list    = nullptr;
+    LinkedList_t*               blocked_list  = nullptr;
+    LinkedList_t*               sleeping_list = nullptr;
+    std::uint64_t               ticks         = 0;
 
     friend void ::SysTick_Handler();
     friend void ::PendSV_Handler();

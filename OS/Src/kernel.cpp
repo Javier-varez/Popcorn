@@ -117,7 +117,7 @@ void OS::Kernel::CreateTask(task_func func,
     tcb->state = task_state::READY;
     tcb->run_last_timestamp = 0;  // never
     strncpy(tcb->name, name, MAX_TASK_NAME);
-    LinkedList_AddEntry(task_list, tcb, list);
+    LinkedList_AddEntry(ready_list, tcb, list);
 }
 
 void IdleTask(void *arg) {
@@ -149,6 +149,8 @@ void OS::Kernel::Sleep(std::uint32_t ticks) {
 
     // Send task to sleep
     tcb->state = task_state::SLEEPING;
+    LinkedList_RemoveEntry(ready_list, tcb, list);
+    LinkedList_AddEntry(sleeping_list, tcb, list);
 
     Hw::g_mcu->TriggerPendSV();
 }
@@ -160,7 +162,7 @@ void OS::Kernel::DestroyTask() {
 
     struct task_control_block *tcb = current_task;
     // Remove task from task_list and free space
-    LinkedList_RemoveEntry(task_list, tcb, list);
+    LinkedList_RemoveEntry(ready_list, tcb, list);
     OsFree(reinterpret_cast<void*>(tcb->stack_base));
     OsFree(tcb);
 
@@ -185,6 +187,10 @@ void OS::Kernel::Wait(const OS::Blockable* blockable) {
         blockable->blocker->priority = current_task->priority;
     }
 
+    // Switch list
+    LinkedList_RemoveEntry(ready_list, tcb, list);
+    LinkedList_AddEntry(blocked_list, tcb, list);
+
     Hw::g_mcu->TriggerPendSV();
 }
 
@@ -195,6 +201,18 @@ void OS::Kernel::Lock(OS::Blockable* blockable, bool acquired) {
         // Restore original priority of the blocker
         blockable->blocker->priority = blockable->blocker->base_priority;
         blockable->blocker = nullptr;
+        // Bring back blocked tasks by this resource
+        task_control_block *tcb = nullptr;
+        task_control_block *tcb_next = nullptr;
+
+        LinkedList_WalkEntry_Safe(blocked_list, tcb, tcb_next, list) {
+            if (tcb->blockArgument.blockable == blockable) {
+                LinkedList_RemoveEntry(blocked_list, tcb, list);
+                LinkedList_AddEntry(ready_list, tcb, list);
+                tcb->state = task_state::READY;
+            }
+        }
+
         Hw::g_mcu->TriggerPendSV();
     }
 }
@@ -233,16 +251,7 @@ void OS::Kernel::TriggerScheduler() {
     // Select next task based on priority
     current_task = NULL;
     struct task_control_block* tcb = NULL;
-    LinkedList_WalkEntry(task_list, tcb, list) {
-        // Resume task if asleep/blocked
-        if ((tcb->state == task_state::SLEEPING) &&
-            (ticks >= tcb->blockArgument.timestamp)) {
-            tcb->state = task_state::READY;
-        } else if ((tcb->state == task_state::BLOCKED) &&
-                 !tcb->blockArgument.blockable->IsBlocked()) {
-            tcb->state = task_state::READY;
-        }
-
+    LinkedList_WalkEntry(ready_list, tcb, list) {
         if (tcb->state == task_state::READY) {
             if (!current_task || (tcb->priority > current_task->priority)) {
                 current_task = tcb;
@@ -264,9 +273,26 @@ void OS::Kernel::TriggerScheduler_Static() {
     g_kernel->TriggerScheduler();
 }
 
+void OS::Kernel::CheckTaskNeedsAwakening() {
+    task_control_block* tcb = nullptr;
+    task_control_block* next_tcb = nullptr;
+
+    LinkedList_WalkEntry_Safe(sleeping_list, tcb, next_tcb, list) {
+        // Resume task if asleep
+        if (ticks >= tcb->blockArgument.timestamp) {
+            tcb->state = task_state::READY;
+            LinkedList_RemoveEntry(sleeping_list, tcb, list);
+            LinkedList_AddEntry(ready_list, tcb, list);
+        }
+    }
+}
+
 void OS::Kernel::HandleTick() {
-    OS::CriticalSection s;
-    ticks++;
+    {
+        OS::CriticalSection s;
+        ticks++;
+    }
+    CheckTaskNeedsAwakening();
     Hw::g_mcu->TriggerPendSV();
 }
 
