@@ -151,7 +151,7 @@ TEST_F(KernelTest, CreateTaskInitializesTCB_Test) {
     ASSERT_EQ(CONTAINER_OF(GetTaskList(), OS::task_control_block, list),
         &task1TCB);
     ASSERT_STREQ(task1TCB.name, "NewTask");
-    ASSERT_EQ(task1TCB.state, OS::task_state::RUNNABLE);
+    ASSERT_EQ(task1TCB.state, OS::task_state::READY);
     ASSERT_EQ(task1TCB.priority, OS::Priority::Level_7);
     ASSERT_EQ(task1TCB.arg, 123U);
     ASSERT_EQ(task1TCB.func, &TaskFunction);
@@ -201,7 +201,7 @@ TEST_F(KernelTest, StartOS_Test) {
     ASSERT_EQ(CONTAINER_OF(GetTaskList(), OS::task_control_block, list),
         &idleTCB);
     ASSERT_STREQ(idleTCB.name, "Idle");
-    ASSERT_EQ(idleTCB.state, OS::task_state::RUNNABLE);
+    ASSERT_EQ(idleTCB.state, OS::task_state::READY);
     ASSERT_EQ(idleTCB.priority, OS::Priority::IDLE);
     ASSERT_EQ(idleTCB.arg, 0U);
     ASSERT_EQ(idleTCB.func, &IdleTask);

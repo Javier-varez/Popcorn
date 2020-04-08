@@ -37,7 +37,7 @@ CLINKAGE void PendSV_Handler();
 
 namespace OS {
 enum class task_state {
-    RUNNABLE,
+    READY,
     RUNNING,
     SLEEPING,
     BLOCKED

@@ -114,7 +114,7 @@ void OS::Kernel::CreateTask(task_func func,
     tcb->priority = priority;
     tcb->base_priority = priority;
     tcb->func = func;
-    tcb->state = task_state::RUNNABLE;
+    tcb->state = task_state::READY;
     tcb->run_last_timestamp = 0;  // never
     strncpy(tcb->name, name, MAX_TASK_NAME);
     LinkedList_AddEntry(task_list, tcb, list);
@@ -226,7 +226,7 @@ void OS::Kernel::TriggerScheduler() {
 
     if (current_task &&
         current_task->state == task_state::RUNNING) {
-        current_task->state = task_state::RUNNABLE;
+        current_task->state = task_state::READY;
         current_task->run_last_timestamp = ticks;
     }
 
@@ -237,13 +237,13 @@ void OS::Kernel::TriggerScheduler() {
         // Resume task if asleep/blocked
         if ((tcb->state == task_state::SLEEPING) &&
             (ticks >= tcb->blockArgument.timestamp)) {
-            tcb->state = task_state::RUNNABLE;
+            tcb->state = task_state::READY;
         } else if ((tcb->state == task_state::BLOCKED) &&
                  !tcb->blockArgument.blockable->IsBlocked()) {
-            tcb->state = task_state::RUNNABLE;
+            tcb->state = task_state::READY;
         }
 
-        if (tcb->state == task_state::RUNNABLE) {
+        if (tcb->state == task_state::READY) {
             if (!current_task || (tcb->priority > current_task->priority)) {
                 current_task = tcb;
             } else if ((tcb->priority == current_task->priority) &&
