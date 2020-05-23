@@ -91,12 +91,10 @@ static int Execute(
 }
 
 static int LogicPID = 0;
-static int XvfbPID = 0;
 
 static void ExitHandler(int errCode = 0)
 {
     kill(LogicPID, SIGTERM);
-    kill(XvfbPID, SIGTERM);
     exit(errCode);
 }
 
@@ -135,31 +133,14 @@ static bool ValidateCPUUsage(double usage_mean, double std_dev, double maxMean, 
 
 int main(int argc, char* argv[], char* envp[])
 {
-    const char* const Env[] = {
-        "DISPLAY=:99",
-        nullptr
-    };
-
     std::string LogicPath = FindExecutableInPath("Logic", envp);
-    std::string XvfbPath = FindExecutableInPath("Xvfb", envp);
-
-    const char* const XvfbArgs[] = {
-        "Xvfb",
-        ":99",
-        "-screen",
-        "0",
-        "1024x768x24",
-        nullptr
-    };
-
-    XvfbPID = Execute(XvfbPath.c_str(), XvfbArgs, Env);
 
     const char* const LogicArgs[] = {
         "Logic",
         nullptr
     };
 
-    LogicPID = Execute(LogicPath.c_str(), LogicArgs, Env);
+    LogicPID = Execute(LogicPath.c_str(), LogicArgs, envp);
     sleep(5);
 
     Saleae saleae("127.0.0.1", 10429);
