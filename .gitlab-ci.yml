@@ -52,5 +52,18 @@ lint:
     script:
         - make lint
 
+coverage:
+    image: javiervarez/ate_builder:latest
+    tags:
+        - arm-none-eabi
+        - docker
+    stage: test
+    script:
+        - make TestCoverage -j
+    artifacts:
+        paths: ["build/coverage"]
+        expire_in: 1 week
+        name: "coverage"
+
 variables:
     GIT_SUBMODULE_STRATEGY: recursive

@@ -5,4 +5,4 @@ set -e
 make -j
 make flash
 
-./build/targets/SystemTest
+xvfb-run -a ./build/targets/SystemTest
