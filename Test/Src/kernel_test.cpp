@@ -403,6 +403,8 @@ TEST_F(KernelTest, Sleep_Test) {
 namespace {
 class FakeBlock: public OS::Blockable {
  public:
+    explicit FakeBlock(OS::Kernel* kernel) :
+      m_kernel(kernel) { }
     bool IsBlocked() const override {
         return m_blocked;
     }
@@ -410,23 +412,28 @@ class FakeBlock: public OS::Blockable {
     void Lock() {
         if (m_blocked) {
             Block();
+            m_kernel->Wait(this);
         } else {
             m_blocked = true;
             LockAcquired();
+            m_kernel->Lock(this, true);
         }
     }
 
     void Unlock() {
         m_blocked = false;
         LockReleased();
+        m_kernel->Lock(this, false);
     }
+
  private:
+    OS::Kernel* m_kernel;
     bool m_blocked = false;
 };
 }  // namespace
 
 TEST_F(KernelTest, Wait_Test) {
-    FakeBlock block;
+    FakeBlock block(kernel.get());
 
     EXPECT_CALL(memManagement, Malloc(kStackSize))
         .Times(1).WillOnce(Return(task1Stack)).RetiresOnSaturation();
@@ -468,14 +475,14 @@ TEST_F(KernelTest, Wait_Test) {
     EXPECT_EQ(GetCurrentTask(), &task2TCB);
 
     EXPECT_CALL(mcu, SupervisorCall(OS::SyscallIdx::Wait));
-    block.Lock();
     EXPECT_CALL(mcu, TriggerPendSV()).Times(1).RetiresOnSaturation();
-    kernel->Wait(&block);
+    block.Lock();
 
     TriggerScheduler();
     EXPECT_EQ(GetCurrentTask(), &task1TCB);
 
     EXPECT_CALL(mcu, SupervisorCall(OS::SyscallIdx::Lock));
+    EXPECT_CALL(mcu, TriggerPendSV()).Times(1).RetiresOnSaturation();
     block.Unlock();
 
     TriggerScheduler();
@@ -483,7 +490,7 @@ TEST_F(KernelTest, Wait_Test) {
 }
 
 TEST_F(KernelTest, Priority_Test) {
-    FakeBlock block;
+    FakeBlock block(kernel.get());
 
     EXPECT_CALL(memManagement, Malloc(sizeof(struct OS::task_control_block)))
         .Times(1).WillOnce(Return(&task1TCB)).RetiresOnSaturation();
@@ -526,9 +533,8 @@ TEST_F(KernelTest, Priority_Test) {
     EXPECT_EQ(GetCurrentTask(), &task2TCB);
 
     EXPECT_CALL(mcu, SupervisorCall(OS::SyscallIdx::Wait));
-    block.Lock();
     EXPECT_CALL(mcu, TriggerPendSV()).Times(1).RetiresOnSaturation();
-    kernel->Wait(&block);
+    block.Lock();
 
     TriggerScheduler();
     EXPECT_EQ(GetCurrentTask(), &task1TCB);
@@ -545,9 +551,10 @@ TEST_F(KernelTest, Priority_Test) {
         kStackSize);
 
     TriggerScheduler();
-    EXPECT_EQ(GetCurrentTask(), &task3TCB);
+    EXPECT_EQ(GetCurrentTask(), &task1TCB);
 
     EXPECT_CALL(mcu, SupervisorCall(OS::SyscallIdx::Lock));
+    EXPECT_CALL(mcu, TriggerPendSV()).Times(1).RetiresOnSaturation();
     block.Unlock();
 
     TriggerScheduler();
@@ -604,7 +611,7 @@ TEST_F(KernelTest, EqualPriorityAppliesRoundRobin_Test) {
 }
 
 TEST_F(KernelTest, PriorityInheritanceAvoidsPriorityInversion_Test) {
-    FakeBlock mutex;
+    FakeBlock mutex(kernel.get());
 
     CreateTask(OS::Priority::Level_0, &task1TCB, task1Stack);
 
@@ -616,7 +623,6 @@ TEST_F(KernelTest, PriorityInheritanceAvoidsPriorityInversion_Test) {
     // Task 1 takes the mutex
     EXPECT_CALL(mcu, SupervisorCall(OS::SyscallIdx::Lock));
     mutex.Lock();
-    kernel->Lock(&mutex, true);
 
     CreateTask(OS::Priority::Level_1, &task2TCB, task2Stack);
 
@@ -630,9 +636,8 @@ TEST_F(KernelTest, PriorityInheritanceAvoidsPriorityInversion_Test) {
 
     // Task 3 attempts to take the mutex
     EXPECT_CALL(mcu, SupervisorCall(OS::SyscallIdx::Wait));
-    mutex.Lock();
     EXPECT_CALL(mcu, TriggerPendSV());
-    kernel->Wait(&mutex);
+    mutex.Lock();
 
     // Now task 1 should inherit the priory of task 3 and
     // execute instead of task 2.
@@ -643,9 +648,9 @@ TEST_F(KernelTest, PriorityInheritanceAvoidsPriorityInversion_Test) {
 
     // Task 1 unlocks the mutex and task 3 resumes execution
     EXPECT_CALL(mcu, SupervisorCall(OS::SyscallIdx::Lock));
-    mutex.Unlock();
     EXPECT_CALL(mcu, TriggerPendSV());
-    kernel->Lock(&mutex, false);
+    mutex.Unlock();
+
     // Priority must be restored
     EXPECT_EQ(task1TCB.priority, task1TCB.base_priority);
     EXPECT_EQ(task1TCB.base_priority, OS::Priority::Level_0);
