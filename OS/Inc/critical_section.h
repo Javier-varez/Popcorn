@@ -21,19 +21,19 @@
 namespace OS {
 class CriticalSection {
  public:
-    // These instructions set the PRIMASK register,
-    // Masking all Interrupts but the hardfault and NMI
-    inline CriticalSection() {
-        #ifndef UNITTEST
-        asm volatile("cpsid i");
-        #endif
-    }
+  // These instructions set the PRIMASK register,
+  // Masking all Interrupts but the hardfault and NMI
+  inline CriticalSection() {
+    #ifndef UNITTEST
+    asm volatile("cpsid i");
+    #endif
+  }
 
-    inline ~CriticalSection() {
-        #ifndef UNITTEST
-        asm volatile("cpsie i");
-        #endif
-    }
+  inline ~CriticalSection() {
+    #ifndef UNITTEST
+    asm volatile("cpsie i");
+    #endif
+  }
 };
 }  // namespace OS
 

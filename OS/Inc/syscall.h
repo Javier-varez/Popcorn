@@ -28,39 +28,43 @@ void App_SysTick_Hook();
 class SyscallTest;
 namespace OS {
 enum class Priority {
-    IDLE = 0,
-    Level_0,
-    Level_1,
-    Level_2,
-    Level_3,
-    Level_4,
-    Level_5,
-    Level_6,
-    Level_7,
-    Level_8,
-    Level_9
+  IDLE = 0,
+  Level_0,
+  Level_1,
+  Level_2,
+  Level_3,
+  Level_4,
+  Level_5,
+  Level_6,
+  Level_7,
+  Level_8,
+  Level_9
 };
 
 class Blockable;
 class Syscall {
  public:
-    void CreateTask(task_func func,
-        std::uintptr_t arg,
-        Priority priority,
-        const char* name,
-        std::uint32_t stack_size);
-    void DestroyTask();
-    void Sleep(std::uint32_t ticks);
-    void StartOS();
-    void Yield();
-    void RegisterError();
-    void Lock(const Blockable& blockable, bool acquired);
-    static Syscall& Instance();
+  void CreateTask(task_func func, void* arg, Priority priority,
+                  const char* name, std::uint32_t stack_size);
+  void DestroyTask();
+  void Sleep(std::uint32_t ticks);
+  void StartOS();
+  void Yield();
+  void RegisterError();
+  void Lock(const Blockable& blockable, bool acquired);
+  static Syscall& Instance();
+
+  // Avoid copy and move
+  Syscall(const Syscall&) = delete;
+  Syscall& operator=(const Syscall&) = delete;
+  Syscall(Syscall&&) = delete;
+  Syscall& operator=(Syscall&&) = delete;
 
  private:
-    void Wait(const Blockable&);
-    friend class Blockable;
-    friend class ::SyscallTest;
+  Syscall() = default;
+  void Wait(const Blockable&);
+  friend class Blockable;
+  friend class ::SyscallTest;
 };
 }  // namespace OS
 

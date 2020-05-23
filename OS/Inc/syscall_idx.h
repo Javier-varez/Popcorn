@@ -20,14 +20,14 @@
 
 namespace OS {
 enum class SyscallIdx {
-    StartOS,
-    CreateTask,
-    Sleep,
-    DestroyTask,
-    Yield,
-    Wait,
-    RegisterError,
-    Lock
+  StartOS,
+  CreateTask,
+  Sleep,
+  DestroyTask,
+  Yield,
+  Wait,
+  RegisterError,
+  Lock
 };
 }  // namespace OS
 

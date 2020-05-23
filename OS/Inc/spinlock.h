@@ -23,12 +23,12 @@
 namespace OS {
 class SpinLock {
  public:
-    SpinLock();
-    void Lock();
-    void Unlock();
+  SpinLock();
+  void Lock();
+  void Unlock();
 
  private:
-    std::uint8_t available;
+  std::uint8_t available;
 };
 }  // namespace OS
 

@@ -23,21 +23,21 @@
 #include "Inc/memory_management.h"
 #include "Inc/platform.h"
 #include "Inc/spinlock.h"
+#include "Inc/unique_lock.h"
 
-static OS::SpinLock lock;
+using OS::SpinLock;
+using OS::UniqueLock;
+
+static SpinLock lock;
 
 CLINKAGE void* OsMalloc(size_t size) {
-    void *ptr = nullptr;
-    // TODO(javier_varez): Migrate to custom allocation scheme
-    lock.Lock();
-    ptr = malloc(size);
-    lock.Unlock();
-
-    return ptr;
+  // TODO(javier_varez): Migrate to custom allocation scheme
+  UniqueLock<SpinLock> l(lock);
+  void* ptr = malloc(size);
+  return ptr;
 }
 
 CLINKAGE void OsFree(void* ptr) {
-    lock.Lock();
-    free(ptr);
-    lock.Unlock();
+  UniqueLock<SpinLock> l(lock);
+  free(ptr);
 }

@@ -30,57 +30,63 @@ using ::testing::Return;
 using ::testing::AtLeast;
 using ::testing::_;
 
+using Hw::g_mcu;
+using OS::Syscall;
+using OS::SyscallIdx;
+using OS::Priority;
+using OS::Blockable;
+
 class SyscallTest: public ::testing::Test {
  private:
-    void SetUp() override {
-        syscall = &OS::Syscall::Instance();
-        Hw::g_mcu = &mcu;
-    }
+  void SetUp() override {
+    syscall = &Syscall::Instance();
+    g_mcu = &mcu;
+  }
 
-    void TearDown() override { }
+  void TearDown() override { }
 
  protected:
-    void SyscallWait(const OS::Blockable& blockable) {
-        syscall->Wait(blockable);
-    }
+  void SyscallWait(const Blockable& blockable) {
+    syscall->Wait(blockable);
+  }
 
-    StrictMock<Hw::MockMCU> mcu;
-    OS::Syscall* syscall;
+  StrictMock<MockMCU> mcu;
+  Syscall* syscall;
 };
 
 TEST_F(SyscallTest, StartOS_Test) {
-    EXPECT_CALL(mcu, SupervisorCall(OS::SyscallIdx::StartOS));
-    syscall->StartOS();
+  EXPECT_CALL(mcu, SupervisorCall(SyscallIdx::StartOS));
+  syscall->StartOS();
 }
 
 static void func(void*) {}
 TEST_F(SyscallTest, CreateTask_Test) {
-    EXPECT_CALL(mcu, SupervisorCall(OS::SyscallIdx::CreateTask));
-    syscall->CreateTask(func, 0, OS::Priority::Level_0, "", 0);
+    EXPECT_CALL(mcu, SupervisorCall(SyscallIdx::CreateTask));
+    syscall->CreateTask(func, 0, Priority::Level_0, "", 0);
 }
 
 TEST_F(SyscallTest, DestroyTask_Test) {
-    EXPECT_CALL(mcu, SupervisorCall(OS::SyscallIdx::DestroyTask));
+    EXPECT_CALL(mcu, SupervisorCall(SyscallIdx::DestroyTask));
     syscall->DestroyTask();
 }
 
 TEST_F(SyscallTest, Sleep_Test) {
-    EXPECT_CALL(mcu, SupervisorCall(OS::SyscallIdx::Sleep));
+    EXPECT_CALL(mcu, SupervisorCall(SyscallIdx::Sleep));
     syscall->Sleep(1);
 }
 
 TEST_F(SyscallTest, Yield_Test) {
-    EXPECT_CALL(mcu, SupervisorCall(OS::SyscallIdx::Yield));
+    EXPECT_CALL(mcu, SupervisorCall(SyscallIdx::Yield));
     syscall->Yield();
 }
 
 TEST_F(SyscallTest, RegisterError_Test) {
-    EXPECT_CALL(mcu, SupervisorCall(OS::SyscallIdx::RegisterError));
+    EXPECT_CALL(mcu, SupervisorCall(SyscallIdx::RegisterError));
     syscall->RegisterError();
 }
 
 TEST_F(SyscallTest, Wait_Test) {
-    OS::Blockable blockable;
-    EXPECT_CALL(mcu, SupervisorCall(OS::SyscallIdx::Wait));
+    Blockable blockable;
+    EXPECT_CALL(mcu, SupervisorCall(SyscallIdx::Wait));
     SyscallWait(blockable);
 }

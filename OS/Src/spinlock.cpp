@@ -26,30 +26,28 @@ extern "C" {
 #include "Inc/spinlock.h"
 #include "Inc/syscall.h"
 
-
 namespace OS {
-    SpinLock::SpinLock() :
-        available(true) { }
+SpinLock::SpinLock() : available(true) { }
 
-    void SpinLock::Lock() {
-        bool done = false;
-        while (!done) {
-            if (__LDREXB(&available)) {
-                done = __STREXB(0, &available) == 0;
-            }
-        }
-        __CLREX();
+void SpinLock::Lock() {
+  bool done = false;
+  while (!done) {
+    if (__LDREXB(&available)) {
+      done = __STREXB(0, &available) == 0;
     }
+  }
+  __CLREX();
+}
 
-    void SpinLock::Unlock() {
-        bool done = false;
-        while (!done) {
-            if (!__LDREXB(&available)) {
-                done = __STREXB(1, &available) == 0;
-            } else {
-                OS::Syscall::Instance().RegisterError();
-            }
-        }
-        __CLREX();
+void SpinLock::Unlock() {
+  bool done = false;
+  while (!done) {
+    if (!__LDREXB(&available)) {
+      done = __STREXB(1, &available) == 0;
+    } else {
+      Syscall::Instance().RegisterError();
     }
+  }
+  __CLREX();
+}
 }  // namespace OS

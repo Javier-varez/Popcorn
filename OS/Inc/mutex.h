@@ -25,13 +25,13 @@
 namespace OS {
 class Mutex: Blockable {
  public:
-    Mutex();
-    void Lock();
-    void Unlock();
+  Mutex();
+  void Lock();
+  void Unlock();
 
  private:
-    std::uint8_t available;
-    bool IsBlocked() const override;
+  std::uint8_t available;
+  bool IsBlocked() const override;
 };
 }  // namespace OS
 

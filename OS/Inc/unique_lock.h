@@ -22,17 +22,17 @@ namespace OS {
 template<class T>
 class UniqueLock {
  public:
-    explicit inline UniqueLock(T& mutex) : // NOLINT
-        m_mutex(mutex) {
-        m_mutex.Lock();
-    }
+  explicit inline UniqueLock(T& mutex) : // NOLINT
+    m_mutex(mutex) {
+    m_mutex.Lock();
+  }
 
-    inline ~UniqueLock() {
-        m_mutex.Unlock();
-    }
+  inline ~UniqueLock() {
+    m_mutex.Unlock();
+  }
 
  private:
-    T& m_mutex;
+  T& m_mutex;
 };
 }  // namespace OS
 

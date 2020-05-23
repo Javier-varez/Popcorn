@@ -31,7 +31,6 @@ LOCAL_CFLAGS := \
 	-I$(GOOGLETEST_INCLUDE_DIR) \
 	-DUNITTEST \
 	-m32 \
-	-Os \
 	-g3 \
 	-Wall \
 	-Werror \

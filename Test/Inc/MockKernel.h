@@ -22,27 +22,21 @@
 #include <gmock/gmock.h>
 #include "Inc/kernel.h"
 
-namespace OS {
-class MockKernel : public Kernel {
+class MockKernel : public OS::Kernel {
  public:
-    MockKernel() = default;
-    MOCK_METHOD0(StartOS, void());
-    MOCK_METHOD5(CreateTask, void(
-        task_func func,
-        uintptr_t arg,
-        OS::Priority priority,
-        const char* name,
-        std::uint32_t stack_size));
-    MOCK_METHOD1(Sleep, void(std::uint32_t ticks));
-    MOCK_METHOD0(DestroyTask, void());
-    MOCK_METHOD0(Yield, void());
-    MOCK_METHOD1(Wait, void(const Blockable* Blockable));
-    MOCK_METHOD1(RegisterError, void(struct auto_task_stack_frame* args));
-    MOCK_METHOD0(GetTicks, std::uint64_t());
-    MOCK_METHOD0(TriggerScheduler, void());
-    MOCK_METHOD0(HandleTick, void());
-    MOCK_METHOD2(Lock, void(Blockable* Blockable, bool available));
+  MockKernel() = default;
+  MOCK_METHOD0(StartOS, void());
+  MOCK_METHOD5(CreateTask, void(task_func func, void* arg, OS::Priority priority,
+                                const char* name, std::uint32_t stack_size));
+  MOCK_METHOD1(Sleep, void(std::uint32_t ticks));
+  MOCK_METHOD0(DestroyTask, void());
+  MOCK_METHOD0(Yield, void());
+  MOCK_METHOD1(Wait, void(const OS::Blockable* Blockable));
+  MOCK_METHOD1(RegisterError, void(OS::auto_task_stack_frame* args));
+  MOCK_METHOD0(GetTicks, std::uint64_t());
+  MOCK_METHOD0(TriggerScheduler, void());
+  MOCK_METHOD0(HandleTick, void());
+  MOCK_METHOD2(Lock, void(OS::Blockable* Blockable, bool available));
 };
-}  // namespace OS
 
 #endif  // TEST_INC_MOCKKERNEL_H_

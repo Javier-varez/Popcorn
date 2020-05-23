@@ -32,31 +32,32 @@ extern MCU* g_mcu;
 
 class MCU {
  public:
-    MCU();
-    TEST_VIRTUAL void Initialize();
+  MCU();
+  TEST_VIRTUAL void Initialize();
 
-    template<OS::SyscallIdx svc_code>
-    static void SupervisorCall() {
-        #ifdef UNITTEST
-        g_mcu->SupervisorCall(svc_code);
-        #else
-        asm volatile("svc %[opcode]"
-            : : [opcode] "i" (static_cast<uint32_t>(svc_code)));
-        #endif
-    }
-    TEST_VIRTUAL void TriggerPendSV();
+  template<OS::SyscallIdx svc_code>
+  static void SupervisorCall() {
+    #ifdef UNITTEST
+    g_mcu->SupervisorCall(svc_code);
+    #else
+    asm volatile("svc %[opcode]"
+        : : [opcode] "i" (static_cast<uint32_t>(svc_code)));
+    #endif
+  }
+  TEST_VIRTUAL void TriggerPendSV();
 
-    TEST_VIRTUAL ~MCU() = default;
+  TEST_VIRTUAL ~MCU() = default;
 
  protected:
-    TEST_VIRTUAL void SupervisorCall(OS::SyscallIdx svc);
-    TEST_VIRTUAL void HandleSVC(struct OS::auto_task_stack_frame* args);
-    static void HandleSVC_Static(struct OS::auto_task_stack_frame* args);
- private:
-    OS::SyscallIdx GetSVCCode(const std::uint8_t* pc) const;
+  TEST_VIRTUAL void SupervisorCall(OS::SyscallIdx svc);
+  TEST_VIRTUAL void HandleSVC(OS::auto_task_stack_frame* args);
+  static void HandleSVC_Static(OS::auto_task_stack_frame* args);
 
-    friend void ::SVC_Handler();
-    friend class ::MCUTest;
+ private:
+  OS::SyscallIdx GetSVCCode(const std::uint8_t* pc) const;
+
+  friend void ::SVC_Handler();
+  friend class ::MCUTest;
 };
 }  // namespace Hw
 

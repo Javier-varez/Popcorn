@@ -21,22 +21,20 @@
 #include "gtest/gtest.h"
 #include "gmock/gmock.h"
 
-using ::testing::StrictMock;
-
 class MemManagement {
  public:
-    virtual void* Malloc(std::size_t size) = 0;
-    virtual void Free(void* ptr) = 0;
-    virtual ~MemManagement() {}
+  virtual void* Malloc(std::size_t size) = 0;
+  virtual void Free(void* ptr) = 0;
+  virtual ~MemManagement() {}
 };
 
 class MockMemManagement: public MemManagement {
  public:
-    MOCK_METHOD1(Malloc, void*(std::size_t));
-    MOCK_METHOD1(Free, void(void*));
-    virtual ~MockMemManagement() {}
+  MOCK_METHOD1(Malloc, void*(std::size_t));
+  MOCK_METHOD1(Free, void(void*));
+  virtual ~MockMemManagement() {}
 };
 
-extern StrictMock<MockMemManagement> *g_MockMemManagement;
+extern ::testing::StrictMock<MockMemManagement> *g_MockMemManagement;
 
 #endif  // TEST_INC_MOCKMEMMANAGEMENT_H_

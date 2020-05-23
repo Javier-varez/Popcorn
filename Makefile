@@ -30,7 +30,9 @@ CPPLINT_DIRS := \
 	OS \
 	Src \
 	Inc \
-	Test
+	Test \
+	SystemTest
 
 lint:
 	find $(CPPLINT_DIRS) -name "*.cpp" -o -name "*.h" -o -name "*.c" | xargs cpplint
+.PHONY: lint

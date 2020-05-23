@@ -17,17 +17,22 @@
 
 #include "Test/Inc/MockMemManagement.h"
 
+#include "gtest/gtest.h"
+#include "gmock/gmock.h"
+
+using ::testing::StrictMock;
+
 StrictMock<MockMemManagement> *g_MockMemManagement = nullptr;
 
 extern "C" void* OsMalloc(std::size_t size) {
-    if (g_MockMemManagement != nullptr) {
-        return g_MockMemManagement->Malloc(size);
-    }
-    return nullptr;
+  if (g_MockMemManagement != nullptr) {
+    return g_MockMemManagement->Malloc(size);
+  }
+  return nullptr;
 }
 
 extern "C" void OsFree(void *ptr) {
-    if (g_MockMemManagement != nullptr) {
-        g_MockMemManagement->Free(ptr);
-    }
+  if (g_MockMemManagement != nullptr) {
+    g_MockMemManagement->Free(ptr);
+  }
 }

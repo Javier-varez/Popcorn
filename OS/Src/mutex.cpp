@@ -27,40 +27,39 @@ extern "C" {
 #include "Inc/kernel.h"
 
 namespace OS {
-    Mutex::Mutex() : available(true) {
-    }
+Mutex::Mutex() : available(true) { }
 
-    void Mutex::Lock() {
-        bool done = false;
-        do {
-            if (__LDREXB(&available)) {
-                done = __STREXB(0, &available) == 0;
-            } else {
-                // Sleep until the lock is free
-                Block();
-            }
-        } while (!done);
-        __CLREX();
-        LockAcquired();
+void Mutex::Lock() {
+  bool done = false;
+  do {
+    if (__LDREXB(&available)) {
+      done = __STREXB(0, &available) == 0;
+    } else {
+      // Sleep until the lock is free
+      Block();
     }
+  } while (!done);
+  __CLREX();
+  LockAcquired();
+}
 
-    void Mutex::Unlock() {
-        bool done = false;
-        while (!done) {
-            if (!__LDREXB(&available)) {
-                done = __STREXB(1, &available) == 0;
-            } else {
-                OS::Syscall::Instance().RegisterError();
-            }
-        }
-        __CLREX();
-        LockReleased();
+void Mutex::Unlock() {
+  bool done = false;
+  while (!done) {
+    if (!__LDREXB(&available)) {
+      done = __STREXB(1, &available) == 0;
+    } else {
+      Syscall::Instance().RegisterError();
     }
+  }
+  __CLREX();
+  LockReleased();
+}
 
-    bool Mutex::IsBlocked() const {
-        return !available;
-        // This should only be called within the os.
-        // No exclusive access required
-    }
+bool Mutex::IsBlocked() const {
+  // This should only be called within the OS.
+  // No exclusive access required
+  return !available;
+}
 
 }  // namespace OS
