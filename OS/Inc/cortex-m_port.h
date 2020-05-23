@@ -53,7 +53,7 @@ class MCU {
     TEST_VIRTUAL void HandleSVC(struct OS::auto_task_stack_frame* args);
     static void HandleSVC_Static(struct OS::auto_task_stack_frame* args);
  private:
-    OS::SyscallIdx GetSVCCode(std::uint8_t* pc);
+    OS::SyscallIdx GetSVCCode(const std::uint8_t* pc) const;
 
     friend void ::SVC_Handler();
     friend class ::MCUTest;

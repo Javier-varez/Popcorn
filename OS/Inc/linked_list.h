@@ -15,6 +15,8 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+// -V:LinkedList_WalkEntry_Safe:623
+
 #ifndef OS_INC_LINKED_LIST_H_
 #define OS_INC_LINKED_LIST_H_
 
@@ -29,10 +31,10 @@ typedef struct LinkedList {
 } LinkedList_t;
 
 #define CONTAINER_OF(ptr, obj, member) \
-    ((obj*)((ptr == NULL) ? NULL : (((uint8_t*)ptr) - offsetof(obj, member))))  // NOLINT
+    ((obj*)(((ptr) == NULL) ? NULL : (((uint8_t*)(ptr)) - offsetof(obj, member))))  // NOLINT
 
 #define LinkedList_NextEntry(element, obj, member) \
-    ((element == NULL) ? NULL : CONTAINER_OF(element->member.next, obj, member))
+    (((element) == NULL) ? NULL : CONTAINER_OF(element->member.next, obj, member))
 
 #define LinkedList_WalkEntry(head, element, member) \
     for (element = CONTAINER_OF(head, typeof(*element), member); \

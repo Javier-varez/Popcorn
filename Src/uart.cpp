@@ -24,10 +24,11 @@
 
 namespace App {
 
-Uart::Uart() { }
+Uart::Uart() {
+    memset(&huart, 0, sizeof(huart));
+}
 
 void Uart::Init() {
-    memset(&huart, 0, sizeof(huart));
     __HAL_RCC_USART2_CLK_ENABLE();
 
     huart.Instance = USART2;

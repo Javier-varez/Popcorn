@@ -38,9 +38,8 @@ void OS::Kernel::TriggerSchedulerEntryHook() {
     // Performance is critical here. That is why
     // we access the registers directly
     constexpr std::uint32_t PIN_1 = 1;
-    constexpr std::uint32_t SET_OFFSET = 0;
 
-    GPIOA->BSRR = 1 << (SET_OFFSET + PIN_1);  // GPIOA1 = 1
+    GPIOA->BSRR = 1 << PIN_1;  // GPIOA1 = 1
 }
 
 void OS::Kernel::TriggerSchedulerExitHook() {
@@ -93,7 +92,7 @@ static void gpio_task(void* arg) {
         HAL_GPIO_Init(args->bank, &gpio);
     }
 
-    while (1) {
+    while (1) {  // -V776
         OS::Syscall::Instance().Sleep(args->delay);
         HAL_GPIO_TogglePin(args->bank, args->pin);
     }
@@ -129,7 +128,7 @@ static void ConfigureClk() {
 }
 
 void InitTask(void *args) {
-    struct TaskArgs** taskArgs = (struct TaskArgs**)(args);
+    TaskArgs** taskArgs = reinterpret_cast<TaskArgs**>(args);
 
     {
         OS::UniqueLock<OS::Mutex> l(mutex);

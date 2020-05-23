@@ -54,13 +54,13 @@ namespace Hw {
         g_mcu->HandleSVC(args);
     }
 
-    OS::SyscallIdx MCU::GetSVCCode(std::uint8_t* pc) {
+    OS::SyscallIdx MCU::GetSVCCode(const std::uint8_t* pc) const {
         // First byte of svc instruction
         return static_cast<OS::SyscallIdx>(pc[-sizeof(std::uint16_t)]);
     }
 
     void MCU::HandleSVC(struct OS::auto_task_stack_frame* args) {
-        std::uint8_t* pc = (std::uint8_t*)args->pc;
+        const std::uint8_t* pc = reinterpret_cast<std::uint8_t*>(args->pc);
         OS::SyscallIdx svc_code = GetSVCCode(pc);
         // The arguments for the original function calls will be in
         // r0 to r3. If more arguments are required, they are placed in

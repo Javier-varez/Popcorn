@@ -42,7 +42,7 @@ static void* AllocateTaskStack(
 
     std::uint8_t* stack = reinterpret_cast<std::uint8_t*>(OsMalloc(size));
     if (stack != NULL) {
-        tcb->stack_base = (uintptr_t)&stack[0];
+        tcb->stack_base = reinterpret_cast<uintptr_t>(&stack[0]);
         task_stack_top = &stack[size];
     }
 
@@ -54,32 +54,36 @@ static std::uint8_t* AllocateTaskStackFrame(std::uint8_t* stack_ptr) {
         return NULL;
     }
 
-    uintptr_t retval =
-        (uintptr_t)(stack_ptr - sizeof(struct OS::auto_task_stack_frame));
+    auto* stack_frame = stack_ptr - sizeof(struct OS::auto_task_stack_frame);
+    uintptr_t stack_frame_ptr = reinterpret_cast<uintptr_t>(stack_frame);
 
     // Align on 8 byte boundary
-    return reinterpret_cast<std::uint8_t*>(retval & 0xfffffff8);
+    return reinterpret_cast<std::uint8_t*>(stack_frame_ptr & 0xfffffff8);
 }
 
 static struct OS::task_stack_frame* AllocateCompleteTaskStackFrame(
     std::uint8_t* stack_ptr) {
     std::uint8_t* ptr = AllocateTaskStackFrame(stack_ptr);
-    return reinterpret_cast<struct OS::task_stack_frame*>(
-        ptr - sizeof(struct OS::manual_task_stack_frame));
+    if (ptr == nullptr) {
+        return nullptr;
+    } else {
+        ptr -= sizeof(struct OS::manual_task_stack_frame);
+        return reinterpret_cast<OS::task_stack_frame*>(ptr);
+    }
 }
 
 void DestroyTaskVeneer() {
     OS::Syscall::Instance().DestroyTask();
 }
 
-static void InitializeTask(
-    struct OS::task_stack_frame* stack_frame_ptr,
-    task_func func,
-    uintptr_t arg) {
+static void InitializeTask(OS::task_stack_frame* stack_frame_ptr,
+                           task_func func,
+                           uintptr_t arg) {
+    auto lr = reinterpret_cast<std::uint32_t>(DestroyTaskVeneer);
     stack_frame_ptr->autosave.pc = reinterpret_cast<std::uint32_t>(func);
     stack_frame_ptr->autosave.r0 = arg;
     stack_frame_ptr->autosave.xpsr = XPSR_INIT_VALUE;
-    stack_frame_ptr->autosave.lr = (std::uint32_t)DestroyTaskVeneer;
+    stack_frame_ptr->autosave.lr = lr;
     stack_frame_ptr->manualsave.lr = EXC_RETURN_PSP_UNPRIV;
 }
 
@@ -104,15 +108,16 @@ void OS::Kernel::CreateTask(task_func func,
         return;
     }
 
-    struct OS::task_stack_frame* task_stack_ptr =
+    struct OS::task_stack_frame* task_stack =
         AllocateCompleteTaskStackFrame(task_stack_top);
-    if (NULL == task_stack_ptr) {
+    if (nullptr == task_stack) {
         return;
     }
 
-    InitializeTask(task_stack_ptr, func, arg);
+    InitializeTask(task_stack, func, arg);
 
-    tcb->stack_ptr = (uintptr_t)task_stack_ptr;
+    auto task_stack_ptr = reinterpret_cast<uintptr_t>(task_stack);
+    tcb->stack_ptr = task_stack_ptr;
     tcb->arg  = arg;
     tcb->priority = priority;
     tcb->base_priority = priority;
@@ -146,9 +151,9 @@ std::uint64_t OS::Kernel::GetTicks() {
     return ticks;
 }
 
-void OS::Kernel::Sleep(std::uint32_t ticks) {
+void OS::Kernel::Sleep(std::uint32_t num_ticks) {
     struct task_control_block* tcb = current_task;
-    tcb->blockArgument.timestamp = ticks + GetTicks();
+    tcb->blockArgument.timestamp = num_ticks + GetTicks();
 
     // Send task to sleep
     tcb->state = task_state::SLEEPING;
@@ -222,7 +227,8 @@ void OS::Kernel::Lock(OS::Blockable* blockable, bool acquired) {
 
 void OS::Kernel::RegisterError(struct OS::auto_task_stack_frame* args) {
     uint32_t pc = args->lr;
-    uint32_t sp = reinterpret_cast<uint32_t>(args + 1);
+    auto next_task_stack_frame = args + 1;
+    uint32_t sp = reinterpret_cast<uint32_t>(next_task_stack_frame);
     HandleErrorHook(pc, args->r0, args->r1, args->r2, args->r3, sp);
 }
 
@@ -243,12 +249,12 @@ __WEAK void OS::Kernel::HandleErrorHook(
 
 void OS::Kernel::TriggerScheduler() {
     TriggerSchedulerEntryHook();
-    uint64_t ticks = GetTicks();
+    uint64_t num_ticks = GetTicks();
 
     if (current_task &&
         current_task->state == task_state::RUNNING) {
         current_task->state = task_state::READY;
-        current_task->run_last_timestamp = ticks;
+        current_task->run_last_timestamp = num_ticks;
     }
 
     // Select next task based on priority

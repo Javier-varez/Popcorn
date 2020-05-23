@@ -22,7 +22,7 @@
 #include <cstdint>
 
 std::uint32_t* const CORE_DEBUG_DHCSR =
-    reinterpret_cast<std::uint32_t*>(0xE000EDF0UL);
+    reinterpret_cast<std::uint32_t*>(0xE000EDF0UL);  // -V566
 
 extern "C"
 void SystemInit(void);

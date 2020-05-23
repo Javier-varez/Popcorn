@@ -35,7 +35,7 @@ namespace OS {
         bool done = false;
         while (!done) {
             if (__LDREXB(&available)) {
-                done = __STREXB(false, &available) == 0;
+                done = __STREXB(0, &available) == 0;
             }
         }
         __CLREX();
@@ -45,7 +45,7 @@ namespace OS {
         bool done = false;
         while (!done) {
             if (!__LDREXB(&available)) {
-                done = __STREXB(true, &available) == 0;
+                done = __STREXB(1, &available) == 0;
             } else {
                 OS::Syscall::Instance().RegisterError();
             }
