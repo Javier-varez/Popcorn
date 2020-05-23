@@ -34,7 +34,9 @@ LOCAL_CFLAGS := \
 	-Os \
 	-g3 \
 	-Wall \
-	-Werror
+	-Werror \
+	-fprofile-arcs \
+	-ftest-coverage
 LOCAL_CXXFLAGS := \
 	$(LOCAL_CFLAGS)
 TEST_SRC := \
@@ -55,4 +57,17 @@ LOCAL_LDFLAGS := \
 	-lgmock \
 	-lpthread
 include $(BUILD_BINARY)
+
+# Test coverage generation
+build/coverage/test_coverage.info: INTERNAL_LOCAL_DIR := $(PWD)/$(LOCAL_DIR)
+build/coverage/test_coverage.info: build/targets/TestOS
+	@mkdir -p $(dir $@)
+	@$<
+	@lcov --no-external --capture --directory build/intermediates/TestOS/ --base-directory . --output-file $@
+	lcov --remove $@ --output-file $@ '$(INTERNAL_LOCAL_DIR)/Src/*' '$(INTERNAL_LOCAL_DIR)/Inc/*'
+	@genhtml -o build/coverage/html $@
+
+TestCoverage: build/coverage/test_coverage.info
+.PHONY += TestCoverage
+
 endif
