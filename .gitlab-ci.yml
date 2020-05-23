@@ -65,5 +65,18 @@ coverage:
         expire_in: 1 week
         name: "coverage"
 
+static-analysis:
+    image: javiervarez/ate_builder:latest
+    tags:
+        - arm-none-eabi
+        - docker
+    stage: test
+    script:
+        - ./ci/static_analysis.sh
+    artifacts:
+        paths: ["build/static_analysis/HTML"]
+        expire_in: 1 week
+        name: "static_analysis"
+
 variables:
     GIT_SUBMODULE_STRATEGY: recursive
