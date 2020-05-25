@@ -32,8 +32,8 @@
 #include <cmath>
 
 Saleae::Saleae(const char addr[], std::uint16_t port) {
-  fd = socket(AF_INET, SOCK_STREAM, 0);
-  if (fd < 0) {
+  m_fd = socket(AF_INET, SOCK_STREAM, 0);
+  if (m_fd < 0) {
     std::printf("Cannot create socket\n");
     return;
   }
@@ -46,7 +46,7 @@ Saleae::Saleae(const char addr[], std::uint16_t port) {
     return;
   }
 
-  if (connect(fd,
+  if (connect(m_fd,
               reinterpret_cast<struct sockaddr*>(&serverAddress),
               sizeof(serverAddress)) < 0) {
     std::printf("Connection failed\n");
@@ -269,8 +269,8 @@ void Saleae::SendCommand(const char cmd[],
                          char response[],
                          std::uint32_t rspLen) const {
   // strlen + 1 to include null string termination
-  send(fd, cmd, std::strlen(cmd) + 1, MSG_NOSIGNAL);
-  ssize_t len = recv(fd, response, rspLen, 0);
+  send(m_fd, cmd, std::strlen(cmd) + 1, MSG_NOSIGNAL);
+  ssize_t len = recv(m_fd, response, rspLen, 0);
   if (len >= 0) {
     response[len] = '\0';
   } else {

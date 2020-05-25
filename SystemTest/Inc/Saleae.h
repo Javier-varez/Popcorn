@@ -61,7 +61,7 @@ class Saleae {
   bool ValidateResponse(std::string response) const;
   void SendCommand(const char cmd[], char response[], std::uint32_t rspLen) const;
 
-  int fd;
+  int m_fd;
   uint32_t m_sample_rate;
   double m_sample_time;
 };

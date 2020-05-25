@@ -30,7 +30,7 @@ class Mutex: Blockable {
   void Unlock();
 
  private:
-  std::uint8_t available;
+  std::uint8_t m_available;
   bool IsBlocked() const override;
 };
 }  // namespace OS

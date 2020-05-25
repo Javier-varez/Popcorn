@@ -25,33 +25,33 @@
 namespace App {
 
 Uart::Uart() {
-    memset(&huart, 0, sizeof(huart));
+    memset(&m_huart, 0, sizeof(m_huart));
 }
 
 void Uart::Init() {
     __HAL_RCC_USART2_CLK_ENABLE();
 
-    huart.Instance = USART2;
-    huart.Init.BaudRate = UART_BAUDRATE;
-    huart.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-    huart.Init.WordLength = UART_WORDLENGTH_8B;
-    huart.Init.StopBits = UART_STOPBITS_1;
-    huart.Init.Parity = UART_PARITY_NONE;
-    huart.Init.Mode = UART_MODE_TX_RX;
-    huart.Init.OverSampling = UART_OVERSAMPLING_16;
-    HAL_UART_Init(&huart);
+    m_huart.Instance = USART2;
+    m_huart.Init.BaudRate = UART_BAUDRATE;
+    m_huart.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+    m_huart.Init.WordLength = UART_WORDLENGTH_8B;
+    m_huart.Init.StopBits = UART_STOPBITS_1;
+    m_huart.Init.Parity = UART_PARITY_NONE;
+    m_huart.Init.Mode = UART_MODE_TX_RX;
+    m_huart.Init.OverSampling = UART_OVERSAMPLING_16;
+    HAL_UART_Init(&m_huart);
 }
 
 void Uart::Send(const char* str) {
     char *noConstStr = const_cast<char*>(str);
-    HAL_UART_Transmit(&huart,
+    HAL_UART_Transmit(&m_huart,
         reinterpret_cast<uint8_t*>(noConstStr),
         std::strlen(str), 1000);
 }
 
 }  // namespace App
 
-void HAL_UART_MspInit(UART_HandleTypeDef *huart) {
+void HAL_UART_MspInit(UART_HandleTypeDef *m_huart) {
     __HAL_RCC_GPIOA_CLK_ENABLE();
 
     GPIO_InitTypeDef gpio;

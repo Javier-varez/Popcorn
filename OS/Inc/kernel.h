@@ -111,7 +111,7 @@ class Kernel {
   TEST_VIRTUAL ~Kernel() = default;
 
   TEST_VIRTUAL task_control_block* GetCurrentTask() {
-    return current_task;
+    return m_current_task;
   }
 
  private:
@@ -126,11 +126,11 @@ class Kernel {
 
   static void TriggerScheduler_Static();
 
-  task_control_block*         current_task  = nullptr;
-  LinkedList_t*               ready_list    = nullptr;
-  LinkedList_t*               blocked_list  = nullptr;
-  LinkedList_t*               sleeping_list = nullptr;
-  std::uint64_t               ticks         = 0;
+  task_control_block*         m_current_task  = nullptr;
+  LinkedList_t*               m_ready_list    = nullptr;
+  LinkedList_t*               m_blocked_list  = nullptr;
+  LinkedList_t*               m_sleeping_list = nullptr;
+  std::uint64_t               m_ticks         = 0;
 
   friend void ::SysTick_Handler();
   friend void ::PendSV_Handler();

@@ -38,7 +38,7 @@ class Blockable {
   void LockReleased() {
     Syscall::Instance().Lock(*this, false);
   }
-  struct task_control_block *blocker;
+  struct task_control_block *m_blocker;
   friend class Kernel;
 };
 }  // namespace OS

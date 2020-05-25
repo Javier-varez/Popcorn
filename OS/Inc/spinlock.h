@@ -28,7 +28,7 @@ class SpinLock {
   void Unlock();
 
  private:
-  std::uint8_t available;
+  std::uint8_t m_available;
 };
 }  // namespace OS
 

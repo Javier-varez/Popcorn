@@ -23,18 +23,18 @@
 namespace App {
 class Uart {
  public:
-    Uart();
-    void Init();
+  Uart();
+  void Init();
 
-    void Send(const char *);
+  void Send(const char *);
 
-    // Copy is not allowed
-    Uart(const Uart&) = delete;
-    Uart operator=(const Uart&) = delete;
+  // Copy is not allowed
+  Uart(const Uart&) = delete;
+  Uart operator=(const Uart&) = delete;
 
  private:
-    UART_HandleTypeDef huart;
-    constexpr static uint32_t UART_BAUDRATE = 115200;
+  UART_HandleTypeDef m_huart;
+  constexpr static uint32_t UART_BAUDRATE = 115200;
 };
 }  // namespace App
 

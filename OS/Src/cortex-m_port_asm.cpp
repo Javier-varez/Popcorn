@@ -40,7 +40,7 @@ CLINKAGE __NAKED void PendSV_Handler() {
     "               mov lr, %[exc_return]             \n"
     "RetISR:        bx lr                             \n"
     : : 
-    [current_task_ptr] "r" (&OS::g_kernel->current_task),
+    [current_task_ptr] "r" (&OS::g_kernel->m_current_task),
     [exc_return] "i" (EXC_RETURN_PSP_UNPRIV),
     [TriggerScheduler] "r" (OS::Kernel::TriggerScheduler_Static)
   );

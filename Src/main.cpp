@@ -24,7 +24,7 @@
 #include "Inc/syscall.h"
 #include "Inc/mutex.h"
 #include "Inc/unique_lock.h"
-#include "Inc/cortex-m_port.h"
+#include "Inc/kernel.h"
 
 #include "Inc/uart.h"
 
@@ -98,7 +98,7 @@ static void gpio_task(void* arg) {
     HAL_GPIO_Init(args->bank, &gpio);
   }
 
-  while (1) {  // -V776
+  while (true) {  // -V776
     Syscall::Instance().Sleep(args->delay);
     HAL_GPIO_TogglePin(args->bank, args->pin);
   }

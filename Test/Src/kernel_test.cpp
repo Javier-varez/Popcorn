@@ -72,19 +72,19 @@ class KernelTest: public ::testing::Test {
 
  protected:
   LinkedList_t* GetReadyTaskList() {
-    return kernel->ready_list;
+    return kernel->m_ready_list;
   }
 
   task_control_block* GetCurrentTask() {
-    return kernel->current_task;
+    return kernel->m_current_task;
   }
 
   uint64_t GetTicks() {
-    return kernel->ticks;
+    return kernel->m_ticks;
   }
 
   void SetTicks(uint64_t ticks) {
-    kernel->ticks = ticks;
+    kernel->m_ticks = ticks;
   }
 
   void HandleTick() {
@@ -96,7 +96,7 @@ class KernelTest: public ::testing::Test {
   }
 
   void SetCurrentTask(task_control_block* tcb) {
-    kernel->current_task = tcb;
+    kernel->m_current_task = tcb;
   }
 
   static void TaskFunction(void* arg) { }

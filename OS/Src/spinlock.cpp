@@ -27,13 +27,13 @@ extern "C" {
 #include "Inc/syscall.h"
 
 namespace OS {
-SpinLock::SpinLock() : available(true) { }
+SpinLock::SpinLock() : m_available(true) { }
 
 void SpinLock::Lock() {
   bool done = false;
   while (!done) {
-    if (__LDREXB(&available)) {
-      done = __STREXB(0, &available) == 0;
+    if (__LDREXB(&m_available)) {
+      done = __STREXB(0, &m_available) == 0;
     }
   }
   __CLREX();
@@ -42,8 +42,8 @@ void SpinLock::Lock() {
 void SpinLock::Unlock() {
   bool done = false;
   while (!done) {
-    if (!__LDREXB(&available)) {
-      done = __STREXB(1, &available) == 0;
+    if (!__LDREXB(&m_available)) {
+      done = __STREXB(1, &m_available) == 0;
     } else {
       Syscall::Instance().RegisterError();
     }
