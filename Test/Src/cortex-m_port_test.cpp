@@ -24,10 +24,12 @@
 #include "Inc/cortex-m_registers.h"
 #include "Inc/syscall_idx.h"
 #include "Test/Inc/MockKernel.h"
+#include "Test/Inc/MockAssert.h"
 
 using ::testing::StrictMock;
 using ::testing::Return;
 using ::testing::AtLeast;
+using ::testing::InSequence;
 using ::testing::_;
 
 using std::uint8_t;
@@ -45,12 +47,19 @@ using Hw::g_SCB;
 using Hw::SCB_t;
 using Hw::MCU;
 
+class MCUWithLowLevelMock: public Hw::MCU {
+ public:
+  MOCK_METHOD(void, DisableInterruptsInternal, (), (const));
+  MOCK_METHOD(void, EnableInterruptsInternal, (), (const));
+};
+
 class MCUTest: public ::testing::Test {
  private:
   void SetUp() override {
-    mcu = make_unique<MCU>();
+    mcu = make_unique<MCUWithLowLevelMock>();
     g_kernel = &kernel;
     g_SCB = &scb;
+    g_platform = &platform;
   }
 
   void TearDown() override {
@@ -61,9 +70,14 @@ class MCUTest: public ::testing::Test {
     mcu->HandleSVC(frame);
   }
 
+  std::atomic_uint32_t& GetNestedInterruptLevel() {
+    return mcu->nested_interrupt_level;
+  }
+
   StrictMock<MockKernel> kernel;
   SCB_t scb;
-  unique_ptr<MCU> mcu;
+  unique_ptr<MCUWithLowLevelMock> mcu;
+  StrictMock<MockPlatform> platform;
 };
 
 struct SVC_OP {
@@ -201,4 +215,32 @@ TEST_F(MCUTest, HandleSVC_Lock_Test) {
 
   EXPECT_CALL(kernel, Lock(&blockable, false)).Times(1).RetiresOnSaturation();
   HandleSVC(&callStack.frame);
+}
+
+TEST_F(MCUTest, EnableDisableInterrupts) {
+  auto& nested_interrupt_level = GetNestedInterruptLevel();
+  EXPECT_EQ(nested_interrupt_level, 0U);
+
+  InSequence s;
+  EXPECT_CALL(*mcu, DisableInterruptsInternal()).RetiresOnSaturation();
+  mcu->DisableInterrupts();
+  EXPECT_EQ(nested_interrupt_level, 1U);
+
+  EXPECT_CALL(*mcu, DisableInterruptsInternal()).Times(0);
+  mcu->DisableInterrupts();
+  EXPECT_EQ(nested_interrupt_level, 2U);
+
+  EXPECT_CALL(platform, Assert(_, _, true)).RetiresOnSaturation();
+  mcu->EnableInterrupts();
+  EXPECT_EQ(nested_interrupt_level, 1U);
+
+  EXPECT_CALL(platform, Assert(_, _, true)).RetiresOnSaturation();
+  EXPECT_CALL(*mcu, EnableInterruptsInternal());
+  mcu->EnableInterrupts();
+  EXPECT_EQ(nested_interrupt_level, 0U);
+}
+
+TEST_F(MCUTest, EnableInterruptsNotPreviouslyDisabled) {
+  EXPECT_CALL(platform, Assert(_, _, false));
+  mcu->EnableInterrupts();
 }

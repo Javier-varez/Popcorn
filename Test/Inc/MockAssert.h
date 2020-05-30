@@ -15,22 +15,22 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef OS_INC_CRITICAL_SECTION_H_
-#define OS_INC_CRITICAL_SECTION_H_
+#ifndef TEST_INC_MOCKASSERT_H_
+#define TEST_INC_MOCKASSERT_H_
 
-#include "Inc/cortex-m_port.h"
+#include <gtest/gtest.h>
+#include <gmock/gmock.h>
 
-namespace OS {
-class CriticalSection {
+class Platform {
  public:
-  inline CriticalSection() {
-    Hw::g_mcu->DisableInterrupts();
-  }
-
-  inline ~CriticalSection() {
-    Hw::g_mcu->EnableInterrupts();
-  }
+  virtual void Assert(const char*, unsigned int, bool) = 0;
 };
-}  // namespace OS
 
-#endif  // OS_INC_CRITICAL_SECTION_H_
+class MockPlatform : public Platform {
+ public:
+  MOCK_METHOD(void, Assert, (const char*, unsigned int, bool));
+};
+
+extern Platform* g_platform;
+
+#endif  // TEST_INC_MOCKASSERT_H_

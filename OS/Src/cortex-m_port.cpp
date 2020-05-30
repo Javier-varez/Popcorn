@@ -38,7 +38,8 @@ namespace Hw {
 MCU* g_mcu = nullptr;
 volatile SCB_t *g_SCB = reinterpret_cast<SCB_t*>(SCB_ADDR);
 
-MCU::MCU() {
+MCU::MCU() :
+  nested_interrupt_level(0) {
   g_mcu = this;
 }
 
@@ -148,5 +149,23 @@ void MCU::HandleSVC(struct auto_task_stack_frame* args) {
       }
   }
 }
+
+void MCU::DisableInterrupts() {
+  auto level = nested_interrupt_level.fetch_add(1);
+  if (level == 0) {
+    DisableInterruptsInternal();
+  }
+}
+
+void MCU::EnableInterrupts() {
+  auto level = nested_interrupt_level.fetch_sub(1);
+  ATE_ASSERT(level != 0);
+  if (level == 1) {
+    EnableInterruptsInternal();
+  }
+}
+
+__WEAK void MCU::DisableInterruptsInternal() const { }
+__WEAK void MCU::EnableInterruptsInternal() const { }
 
 }  // namespace Hw

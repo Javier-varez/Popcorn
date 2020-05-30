@@ -18,6 +18,8 @@
 #ifndef OS_INC_CORTEX_M_PORT_H_
 #define OS_INC_CORTEX_M_PORT_H_
 
+#include <atomic>
+
 #include "Inc/platform.h"
 #include "Inc/syscall_idx.h"
 #include "Inc/kernel.h"
@@ -35,16 +37,18 @@ class MCU {
   MCU();
   TEST_VIRTUAL void Initialize();
 
-  template<OS::SyscallIdx svc_code>
+  template<OS::SyscallIdx id>
   static void SupervisorCall() {
     #ifdef UNITTEST
-    g_mcu->SupervisorCall(svc_code);
+    g_mcu->SupervisorCall(id);
     #else
     asm volatile("svc %[opcode]"
-        : : [opcode] "i" (static_cast<uint32_t>(svc_code)));
+        : : [opcode] "i" (static_cast<uint32_t>(id)));
     #endif
   }
   TEST_VIRTUAL void TriggerPendSV();
+  TEST_VIRTUAL void DisableInterrupts();
+  TEST_VIRTUAL void EnableInterrupts();
 
   TEST_VIRTUAL ~MCU() = default;
 
@@ -54,7 +58,11 @@ class MCU {
   static void HandleSVC_Static(OS::auto_task_stack_frame* args);
 
  private:
+  std::atomic_uint32_t nested_interrupt_level;
+
   OS::SyscallIdx GetSVCCode(const std::uint8_t* pc) const;
+  TEST_VIRTUAL void DisableInterruptsInternal() const;
+  TEST_VIRTUAL void EnableInterruptsInternal() const;
 
   friend void ::SVC_Handler();
   friend class ::MCUTest;

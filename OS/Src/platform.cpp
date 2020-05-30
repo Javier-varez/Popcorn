@@ -15,22 +15,14 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef OS_INC_CRITICAL_SECTION_H_
-#define OS_INC_CRITICAL_SECTION_H_
+#include "Inc/platform.h"
 
-#include "Inc/cortex-m_port.h"
-
-namespace OS {
-class CriticalSection {
- public:
-  inline CriticalSection() {
-    Hw::g_mcu->DisableInterrupts();
+// Template implementation of AteAssert.
+// You may want to override this function
+// on your application to deal properly with this
+// situation
+__WEAK void AteAssert(const char* name, unsigned int line, bool condition) {
+  if (!condition) {
+    while (true) { }
   }
-
-  inline ~CriticalSection() {
-    Hw::g_mcu->EnableInterrupts();
-  }
-};
-}  // namespace OS
-
-#endif  // OS_INC_CRITICAL_SECTION_H_
+}

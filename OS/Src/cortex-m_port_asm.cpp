@@ -56,3 +56,13 @@ CLINKAGE __NAKED void SVC_Handler() {
     : : [svc_handler] "r" (Hw::MCU::HandleSVC_Static)
   );
 }
+
+namespace Hw {
+void MCU::DisableInterruptsInternal() const {
+  asm volatile("cpsid i");
+}
+
+void MCU::EnableInterruptsInternal() const {
+  asm volatile("cpsie i");
+}
+};

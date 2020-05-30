@@ -20,10 +20,18 @@
 
 #include <cstdint>
 
+void AteAssert(const char* name, unsigned int line, bool condition);
+
 #define CLINKAGE                    extern "C"
 #define __STRINGIZE(_x)             #_x
 #define __NAKED                     __attribute__((naked))
 #define __WEAK                      __attribute__((weak))
+
+#ifdef DISABLE_ASSERT
+#define ATE_ASSERT(condition)
+#else
+#define ATE_ASSERT(condition)       AteAssert(__FILE__, __LINE__, condition)
+#endif
 
 #ifdef UNITTEST
 #define TEST_VIRTUAL virtual

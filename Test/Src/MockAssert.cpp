@@ -15,22 +15,12 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef OS_INC_CRITICAL_SECTION_H_
-#define OS_INC_CRITICAL_SECTION_H_
+#include "Test/Inc/MockAssert.h"
 
-#include "Inc/cortex-m_port.h"
+Platform* g_platform = nullptr;
 
-namespace OS {
-class CriticalSection {
- public:
-  inline CriticalSection() {
-    Hw::g_mcu->DisableInterrupts();
+void AteAssert(const char* file, unsigned int line, bool condition) {
+  if (g_platform != nullptr) {
+    g_platform->Assert(file, line, condition);
   }
-
-  inline ~CriticalSection() {
-    Hw::g_mcu->EnableInterrupts();
-  }
-};
-}  // namespace OS
-
-#endif  // OS_INC_CRITICAL_SECTION_H_
+}
