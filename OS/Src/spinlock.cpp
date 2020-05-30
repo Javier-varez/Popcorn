@@ -18,36 +18,20 @@
 // This is an open source non-commercial project. Dear PVS-Studio, please check it.
 // PVS-Studio Static Code Analyzer for C, C++, C#, and Java: http://www.viva64.com
 
-extern "C" {
-#include <stdint.h>
-#include <cmsis_gcc.h>
-}
-
 #include "Inc/spinlock.h"
 #include "Inc/syscall.h"
 
 namespace OS {
-SpinLock::SpinLock() : m_available(true) { }
+SpinLock::SpinLock() : m_held(ATOMIC_FLAG_INIT) { }
 
 void SpinLock::Lock() {
-  bool done = false;
-  while (!done) {
-    if (__LDREXB(&m_available)) {
-      done = __STREXB(0, &m_available) == 0;
-    }
-  }
-  __CLREX();
+  bool was_already_held;
+  do {
+    was_already_held = m_held.test_and_set();
+  } while (was_already_held);
 }
 
 void SpinLock::Unlock() {
-  bool done = false;
-  while (!done) {
-    if (!__LDREXB(&m_available)) {
-      done = __STREXB(1, &m_available) == 0;
-    } else {
-      Syscall::Instance().RegisterError();
-    }
-  }
-  __CLREX();
+  m_held.clear();
 }
 }  // namespace OS

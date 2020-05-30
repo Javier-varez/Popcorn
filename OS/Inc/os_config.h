@@ -18,7 +18,12 @@
 #ifndef OS_INC_OS_CONFIG_H_
 #define OS_INC_OS_CONFIG_H_
 
+#include <cstdint>
+
 constexpr std::uint32_t MINIMUM_TASK_STACK_SIZE = 256;
 constexpr std::uint32_t MAX_TASK_NAME = 10;
+
+constexpr std::uint32_t SYSTICK_SRC_CLK_FREQ_HZ = 72'000'000;
+constexpr std::uint32_t TICK_FREQ_HZ = 1'000;
 
 #endif  // OS_INC_OS_CONFIG_H_

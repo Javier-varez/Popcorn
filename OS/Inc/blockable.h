@@ -23,11 +23,6 @@
 namespace OS {
 // Mutex, lists, etc, must be sublcass of Blockable
 class Blockable {
- public:
-  virtual bool IsBlocked() const {
-    return false;
-  }
-
  protected:
   void Block() {
     Syscall::Instance().Wait(*this);

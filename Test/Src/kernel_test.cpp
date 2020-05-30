@@ -404,9 +404,6 @@ class FakeBlock: public Blockable {
  public:
   explicit FakeBlock(Kernel* kernel) :
     m_kernel(kernel) { }
-  bool IsBlocked() const override {
-    return m_blocked;
-  }
 
   void Lock() {
     if (m_blocked) {

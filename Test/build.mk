@@ -42,7 +42,9 @@ TEST_SRC := \
 	$(LOCAL_DIR)/../OS/Src/syscalls.cpp \
 	$(LOCAL_DIR)/../OS/Src/cortex-m_port.cpp \
 	$(LOCAL_DIR)/../OS/Src/kernel.cpp \
-	$(LOCAL_DIR)/../OS/Src/linked_list.c
+	$(LOCAL_DIR)/../OS/Src/linked_list.c \
+	$(LOCAL_DIR)/../OS/Src/spinlock.cpp \
+	$(LOCAL_DIR)/../OS/Src/mutex.cpp
 
 LOCAL_SRC := \
 	$(TEST_SRC) \

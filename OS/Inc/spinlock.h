@@ -18,7 +18,7 @@
 #ifndef OS_INC_SPINLOCK_H_
 #define OS_INC_SPINLOCK_H_
 
-#include <cstdint>
+#include <atomic>
 
 namespace OS {
 class SpinLock {
@@ -28,7 +28,7 @@ class SpinLock {
   void Unlock();
 
  private:
-  std::uint8_t m_available;
+  std::atomic_flag m_held;
 };
 }  // namespace OS
 

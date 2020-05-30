@@ -53,6 +53,21 @@ struct SCB_t {
   std::uint32_t CPACR;
 };
 extern volatile SCB_t *g_SCB;
+
+constexpr std::uint32_t SYSTICK_ADDR = 0xE000E010UL;
+struct SysTick_t {
+  std::uint32_t CTRL;
+  std::uint32_t LOAD;
+  std::uint32_t VAL;
+  std::uint32_t CALIB;
+};
+extern volatile SysTick_t *g_SysTick;
+
+constexpr std::uint32_t SysTick_Ctrl_CountFlag        = (1UL << 16U);
+constexpr std::uint32_t SysTick_Ctrl_ClkSource        = (1UL <<  2U);
+constexpr std::uint32_t SysTick_Ctrl_TickInt          = (1UL <<  1U);
+constexpr std::uint32_t SysTick_Ctrl_Enable           = (1UL <<  0U);
+
 }  // namespace Hw
 
 #endif  // OS_INC_CORTEX_M_REGISTERS_H_

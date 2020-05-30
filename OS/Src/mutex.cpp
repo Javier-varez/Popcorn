@@ -18,48 +18,27 @@
 // This is an open source non-commercial project. Dear PVS-Studio, please check it.
 // PVS-Studio Static Code Analyzer for C, C++, C#, and Java: http://www.viva64.com
 
-extern "C" {
-#include <stdint.h>
-#include <cmsis_gcc.h>
-}
-
 #include "Inc/mutex.h"
 #include "Inc/kernel.h"
 
 namespace OS {
-Mutex::Mutex() : m_available(true) { }
+Mutex::Mutex() : m_held(ATOMIC_FLAG_INIT) { }
 
 void Mutex::Lock() {
-  bool done = false;
-  do {
-    if (__LDREXB(&m_available)) {
-      done = __STREXB(0, &m_available) == 0;
-    } else {
-      // Sleep until the lock is free
-      Block();
-    }
-  } while (!done);
-  __CLREX();
+  bool was_already_held = m_held.test_and_set();
+
+  // If the lock wasn't available
+  // try again after blocking the task
+  while (was_already_held) {
+    Block();
+    was_already_held = m_held.test_and_set();
+  }
   LockAcquired();
 }
 
 void Mutex::Unlock() {
-  bool done = false;
-  while (!done) {
-    if (!__LDREXB(&m_available)) {
-      done = __STREXB(1, &m_available) == 0;
-    } else {
-      Syscall::Instance().RegisterError();
-    }
-  }
-  __CLREX();
+  m_held.clear();
   LockReleased();
-}
-
-bool Mutex::IsBlocked() const {
-  // This should only be called within the OS.
-  // No exclusive access required
-  return !m_available;
 }
 
 }  // namespace OS

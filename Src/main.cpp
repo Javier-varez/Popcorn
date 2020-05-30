@@ -148,6 +148,11 @@ void InitTask(void *args) {
   }
 }
 
+// HAL should not use the systick, It is used by the OS
+CLINKAGE HAL_StatusTypeDef HAL_InitTick(uint32_t) {
+  return HAL_OK;
+}
+
 int main() {
   struct TaskArgs args_task_1 = {
     "GPIO_C13",

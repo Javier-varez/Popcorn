@@ -269,9 +269,8 @@ void Kernel::TriggerScheduler() {
     }
   }
 
-  if (m_current_task != nullptr) {
-    m_current_task->state = task_state::RUNNING;
-  }
+  ATE_ASSERT(m_current_task != nullptr);
+  m_current_task->state = task_state::RUNNING;
 
   TriggerSchedulerExitHook();
 }

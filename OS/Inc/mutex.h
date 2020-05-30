@@ -18,7 +18,7 @@
 #ifndef OS_INC_MUTEX_H_
 #define OS_INC_MUTEX_H_
 
-#include <cstdint>
+#include <atomic>
 
 #include "Inc/blockable.h"
 
@@ -30,8 +30,7 @@ class Mutex: Blockable {
   void Unlock();
 
  private:
-  std::uint8_t m_available;
-  bool IsBlocked() const override;
+  std::atomic_flag m_held;
 };
 }  // namespace OS
 

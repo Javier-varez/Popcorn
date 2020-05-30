@@ -37,6 +37,7 @@ namespace Hw {
 
 MCU* g_mcu = nullptr;
 volatile SCB_t *g_SCB = reinterpret_cast<SCB_t*>(SCB_ADDR);
+volatile SysTick_t *g_SysTick = reinterpret_cast<SysTick_t*>(SYSTICK_ADDR);
 
 MCU::MCU() :
   nested_interrupt_level(0) {
@@ -49,6 +50,13 @@ void MCU::Initialize() {
   g_SCB->SHP[PEND_SV_SHP_IDX] = 0xFF;  // Minimum priority for PendSV
   g_SCB->SHP[SVC_CALL_SHP_IDX] = 0x00;  // Maximum priority for SVC
 
+  // Configure SysTick
+  g_SysTick->LOAD = SYSTICK_SRC_CLK_FREQ_HZ / TICK_FREQ_HZ - 1;
+  g_SysTick->VAL = 0U;
+  g_SysTick->CTRL = SysTick_Ctrl_Enable
+                  | SysTick_Ctrl_TickInt
+                  | SysTick_Ctrl_ClkSource;
+
   // Turn on stack alignment to 8 bytes on exception entry
   // On entry, the stacked value of the XPSR register will have
   // bit 9 set to 1 if the stack was aligned to 8 bytes.
@@ -58,8 +66,6 @@ void MCU::Initialize() {
 void MCU::TriggerPendSV() {
   g_SCB->ICSR |= SCB_ICSR_PENDSVSET;
 }
-
-void MCU::SupervisorCall(SyscallIdx svc) { }
 
 void MCU::HandleSVC_Static(struct auto_task_stack_frame* args) {
   g_mcu->HandleSVC(args);

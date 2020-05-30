@@ -53,7 +53,7 @@ class MCU {
   TEST_VIRTUAL ~MCU() = default;
 
  protected:
-  TEST_VIRTUAL void SupervisorCall(OS::SyscallIdx svc);
+  TEST_VIRTUAL void SupervisorCall(OS::SyscallIdx svc) { }
   TEST_VIRTUAL void HandleSVC(OS::auto_task_stack_frame* args);
   static void HandleSVC_Static(OS::auto_task_stack_frame* args);
 
