@@ -60,11 +60,11 @@ void MCU::Initialize() {
   // Turn on stack alignment to 8 bytes on exception entry
   // On entry, the stacked value of the XPSR register will have
   // bit 9 set to 1 if the stack was aligned to 8 bytes.
-  g_SCB->CCR |= SCB_CCR_STKALIGN;
+  g_SCB->CCR = SCB_CCR_STKALIGN | g_SCB->CCR;
 }
 
 void MCU::TriggerPendSV() {
-  g_SCB->ICSR |= SCB_ICSR_PENDSVSET;
+  g_SCB->ICSR = SCB_ICSR_PENDSVSET | g_SCB->ICSR;
 }
 
 void MCU::HandleSVC_Static(struct auto_task_stack_frame* args) {
@@ -110,10 +110,10 @@ void MCU::HandleSVC(struct auto_task_stack_frame* args) {
         const auto* name = reinterpret_cast<char*>(*original_call_stack);
         auto stack_size = static_cast<uint32_t>(*(original_call_stack + 1));
         g_kernel->CreateTask(func,
-                                 arg,
-                                 priority,
-                                 name,
-                                 stack_size);
+                             arg,
+                             priority,
+                             name,
+                             stack_size);
         break;
       }
 

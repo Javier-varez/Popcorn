@@ -2,6 +2,7 @@ LOCAL_DIR := $(call current-dir)
 
 CC := gcc
 CXX := g++
+LD := g++
 
 ifeq ($(PREREQUISITES_OK),true)
 TARGET_CFLAGS := \

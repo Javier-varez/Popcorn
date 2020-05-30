@@ -20,6 +20,7 @@
 
 #include <atomic>
 
+class SpinLockTest;
 namespace OS {
 class SpinLock {
  public:
@@ -29,6 +30,7 @@ class SpinLock {
 
  private:
   std::atomic_flag m_held;
+  friend SpinLockTest;
 };
 }  // namespace OS
 

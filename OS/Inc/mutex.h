@@ -22,6 +22,8 @@
 
 #include "Inc/blockable.h"
 
+class MutexTest;
+
 namespace OS {
 class Mutex: Blockable {
  public:
@@ -31,6 +33,7 @@ class Mutex: Blockable {
 
  private:
   std::atomic_flag m_held;
+  friend MutexTest;
 };
 }  // namespace OS
 

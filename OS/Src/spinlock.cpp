@@ -22,7 +22,9 @@
 #include "Inc/syscall.h"
 
 namespace OS {
-SpinLock::SpinLock() : m_held(ATOMIC_FLAG_INIT) { }
+SpinLock::SpinLock() {
+  m_held.clear();
+}
 
 void SpinLock::Lock() {
   bool was_already_held;

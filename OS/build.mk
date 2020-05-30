@@ -1,5 +1,9 @@
 LOCAL_DIR := $(call current-dir)
 
+CC := gcc
+CXX := g++
+LD := g++
+
 include $(CLEAR_VARS)
 LOCAL_CROSS_COMPILE := arm-none-eabi-
 LOCAL_NAME := os

@@ -63,10 +63,11 @@ include $(BUILD_BINARY)
 build/coverage/test_coverage.info: INTERNAL_LOCAL_DIR := $(PWD)/$(LOCAL_DIR)
 build/coverage/test_coverage.info: build/targets/TestOS
 	@mkdir -p $(dir $@)
+	@lcov --zerocounters --directory build/intermediates/TestOS/ --base-directory .
 	@$<
-	@lcov --no-external --capture --directory build/intermediates/TestOS/ --base-directory . --output-file $@
-	lcov --remove $@ --output-file $@ '$(INTERNAL_LOCAL_DIR)/Src/*' '$(INTERNAL_LOCAL_DIR)/Inc/*'
-	@genhtml -o build/coverage/html $@
+	@lcov --capture --no-external --directory build/intermediates/TestOS/ --base-directory . --rc lcov_branch_coverage=1 --output-file $@
+	@lcov --remove $@ --output-file $@ --rc lcov_branch_coverage=1 '$(INTERNAL_LOCAL_DIR)/Src/*' '$(INTERNAL_LOCAL_DIR)/Inc/*'
+	@genhtml -o build/coverage/html --rc genhtml_branch_coverage=1 $@
 
 TestCoverage: build/coverage/test_coverage.info
 .PHONY += TestCoverage

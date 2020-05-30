@@ -26,9 +26,9 @@
 extern "C" {
 #endif
 
-struct LinkedList_t {
-  struct LinkedList_t* next;
-};
+typedef struct LinkedList_t_ {
+  struct LinkedList_t_* next;
+} LinkedList_t;
 
 #define CONTAINER_OF(ptr, obj, member) \
   ((obj*)(((ptr) == NULL) ? NULL : (((uint8_t*)(ptr)) - offsetof(obj, member))))  // NOLINT

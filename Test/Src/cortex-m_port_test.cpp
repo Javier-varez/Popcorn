@@ -30,6 +30,7 @@ using ::testing::StrictMock;
 using ::testing::Return;
 using ::testing::AtLeast;
 using ::testing::InSequence;
+using ::testing::StrEq;
 using ::testing::_;
 
 using std::uint8_t;
@@ -45,6 +46,8 @@ using OS::Priority;
 using OS::Blockable;
 using Hw::g_SCB;
 using Hw::SCB_t;
+using Hw::g_SysTick;
+using Hw::SysTick_t;
 using Hw::MCU;
 
 class MCUWithLowLevelMock: public Hw::MCU {
@@ -59,6 +62,7 @@ class MCUTest: public ::testing::Test {
     mcu = make_unique<MCUWithLowLevelMock>();
     g_kernel = &kernel;
     g_SCB = &scb;
+    g_SysTick = &systick;
     g_platform = &platform;
   }
 
@@ -76,6 +80,7 @@ class MCUTest: public ::testing::Test {
 
   StrictMock<MockKernel> kernel;
   SCB_t scb;
+  SysTick_t systick;
   unique_ptr<MCUWithLowLevelMock> mcu;
   StrictMock<MockPlatform> platform;
 };
@@ -125,6 +130,15 @@ TEST_F(MCUTest, HandleSVC_CreateTask_Test) {
   callStack.data[1] = (uint32_t)stack_size;
 
   EXPECT_CALL(kernel, CreateTask(testfunc, arg, prio, name, stack_size))
+      .Times(1).RetiresOnSaturation();
+  HandleSVC(&callStack.frame);
+
+  // Now with aligned stack on entry
+  callStack.frame.xpsr |= 1U << 9;
+
+  callStack.data[1] = (uint32_t)name;
+  callStack.data[2] = (uint32_t)stack_size;
+  EXPECT_CALL(kernel, CreateTask(testfunc, arg, prio, StrEq(name), stack_size))
       .Times(1).RetiresOnSaturation();
   HandleSVC(&callStack.frame);
 }
@@ -243,4 +257,17 @@ TEST_F(MCUTest, EnableDisableInterrupts) {
 TEST_F(MCUTest, EnableInterruptsNotPreviouslyDisabled) {
   EXPECT_CALL(platform, Assert(_, _, false));
   mcu->EnableInterrupts();
+}
+
+TEST_F(MCUTest, Initialize) {
+  mcu->Initialize();
+  EXPECT_EQ(scb.SHP[Hw::SYSTICK_SHP_IDX], 0xFF);
+  EXPECT_EQ(scb.SHP[Hw::PEND_SV_SHP_IDX], 0xFF);
+  EXPECT_EQ(scb.SHP[Hw::SVC_CALL_SHP_IDX], 0x00);
+
+  EXPECT_EQ(systick.LOAD, 71999U);
+  EXPECT_EQ(systick.VAL, 0U);
+  EXPECT_EQ(systick.CTRL, 7U);
+
+  EXPECT_TRUE(scb.CCR & Hw::SCB_CCR_STKALIGN);
 }

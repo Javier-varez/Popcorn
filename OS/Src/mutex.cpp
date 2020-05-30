@@ -22,7 +22,9 @@
 #include "Inc/kernel.h"
 
 namespace OS {
-Mutex::Mutex() : m_held(ATOMIC_FLAG_INIT) { }
+Mutex::Mutex() {
+  m_held.clear();
+}
 
 void Mutex::Lock() {
   bool was_already_held = m_held.test_and_set();
