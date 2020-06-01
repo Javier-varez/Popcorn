@@ -2,3 +2,4 @@ Doc
 build
 .vscode
 output.bin
+*/__pycache__

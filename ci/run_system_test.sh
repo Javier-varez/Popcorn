@@ -1,8 +1,6 @@
-#!/bin/bash -x
+#!/bin/bash -xe
 
-set -e
+make -j$(nproc) flash
 
-make -j
-make flash
-
-xvfb-run -a ./build/targets/SystemTest
+cd SystemTest
+xvfb-run -a pytest-3
