@@ -145,6 +145,16 @@ TEST_F(LinkedListTest, RemoveEntryTest) {
 
   LinkedList_RemoveEntry(head, &element2, list);
   ASSERT_EQ(head, nullptr);
+
+  // Try removing an element that is not in the list
+  LinkedList_AddEntry(head, &element1, list);
+  ASSERT_EQ(head, &element1.list);
+  ASSERT_EQ(head->next, nullptr);
+
+  // The list shouldn't change
+  LinkedList_RemoveEntry(head, &element2, list);
+  ASSERT_EQ(head, &element1.list);
+  ASSERT_EQ(head->next, nullptr);
 }
 
 TEST_F(LinkedListTest, WalkEntryTest) {

@@ -61,32 +61,32 @@ TEST_F(SyscallTest, StartOS_Test) {
 
 static void func(void*) {}
 TEST_F(SyscallTest, CreateTask_Test) {
-    EXPECT_CALL(mcu, SupervisorCall(SyscallIdx::CreateTask));
-    syscall->CreateTask(func, 0, Priority::Level_0, "", 0);
+  EXPECT_CALL(mcu, SupervisorCall(SyscallIdx::CreateTask));
+  syscall->CreateTask(func, 0, Priority::Level_0, "", 0);
 }
 
 TEST_F(SyscallTest, DestroyTask_Test) {
-    EXPECT_CALL(mcu, SupervisorCall(SyscallIdx::DestroyTask));
-    syscall->DestroyTask();
+  EXPECT_CALL(mcu, SupervisorCall(SyscallIdx::DestroyTask));
+  syscall->DestroyTask();
 }
 
 TEST_F(SyscallTest, Sleep_Test) {
-    EXPECT_CALL(mcu, SupervisorCall(SyscallIdx::Sleep));
-    syscall->Sleep(1);
+  EXPECT_CALL(mcu, SupervisorCall(SyscallIdx::Sleep));
+  syscall->Sleep(1);
 }
 
 TEST_F(SyscallTest, Yield_Test) {
-    EXPECT_CALL(mcu, SupervisorCall(SyscallIdx::Yield));
-    syscall->Yield();
+  EXPECT_CALL(mcu, SupervisorCall(SyscallIdx::Yield));
+  syscall->Yield();
 }
 
 TEST_F(SyscallTest, RegisterError_Test) {
-    EXPECT_CALL(mcu, SupervisorCall(SyscallIdx::RegisterError));
-    syscall->RegisterError();
+  EXPECT_CALL(mcu, SupervisorCall(SyscallIdx::RegisterError));
+  syscall->RegisterError();
 }
 
 TEST_F(SyscallTest, Wait_Test) {
-    Blockable blockable;
-    EXPECT_CALL(mcu, SupervisorCall(SyscallIdx::Wait));
-    SyscallWait(blockable);
+  Blockable blockable;
+  EXPECT_CALL(mcu, SupervisorCall(SyscallIdx::Wait));
+  SyscallWait(blockable);
 }
