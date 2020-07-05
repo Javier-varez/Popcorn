@@ -18,7 +18,7 @@
 #include "gtest/gtest.h"
 #include "gmock/gmock.h"
 
-#include "Inc/linked_list.h"
+#include "Inc/utils/linked_list.h"
 
 struct ListElement {
   uint32_t a;

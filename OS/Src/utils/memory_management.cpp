@@ -15,25 +15,29 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef OS_INC_UNIQUE_LOCK_H_
-#define OS_INC_UNIQUE_LOCK_H_
+// This is an open source non-commercial project. Dear PVS-Studio, please check it.
+// PVS-Studio Static Code Analyzer for C, C++, C#, and Java: http://www.viva64.com
 
-namespace OS {
-template<class T>
-class UniqueLock {
- public:
-  explicit inline UniqueLock(T& mutex) : // NOLINT
-    m_mutex(mutex) {
-    m_mutex.Lock();
-  }
+#include <stdlib.h>
 
-  inline ~UniqueLock() {
-    m_mutex.Unlock();
-  }
+#include "Inc/utils/memory_management.h"
+#include "Inc/primitives/spinlock.h"
+#include "Inc/primitives/unique_lock.h"
+#include "Inc/platform.h"
 
- private:
-  T& m_mutex;
-};
-}  // namespace OS
+using OS::SpinLock;
+using OS::UniqueLock;
 
-#endif  // OS_INC_UNIQUE_LOCK_H_
+static SpinLock lock;
+
+CLINKAGE void* OsMalloc(size_t size) {
+  // TODO(javier_varez): Migrate to custom allocation scheme
+  UniqueLock<SpinLock> l(lock);
+  void* ptr = malloc(size);
+  return ptr;
+}
+
+CLINKAGE void OsFree(void* ptr) {
+  UniqueLock<SpinLock> l(lock);
+  free(ptr);
+}

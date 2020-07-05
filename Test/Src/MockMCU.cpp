@@ -15,12 +15,14 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "Test/Inc/MockAssert.h"
+#include "Test/Inc/MockMCU.h"
 
-Platform* g_platform = nullptr;
+namespace Hw {
+MockSVC *g_svc = nullptr;
+}  // namespace Hw
 
-void AteAssertFailed(std::uintptr_t PC) {
-  if (g_platform != nullptr) {
-    g_platform->Assert(PC);
+void _svc_call(OS::SyscallIdx id) {
+  if (Hw::g_svc) {
+    Hw::g_svc->SupervisorCall(id);
   }
 }

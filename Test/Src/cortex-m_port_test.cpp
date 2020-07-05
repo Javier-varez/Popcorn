@@ -1,17 +1,17 @@
-/* 
+/*
  * This file is part of the Cortex-M Scheduler
  * Copyright (c) 2020 Javier Alvarez
- * 
- * This program is free software: you can redistribute it and/or modify  
- * it under the terms of the GNU General Public License as published by  
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, version 3.
  *
- * This program is distributed in the hope that it will be useful, but 
- * WITHOUT ANY WARRANTY; without even the implied warranty of 
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU 
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
  * General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License 
+ * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
@@ -20,9 +20,9 @@
 #include "gtest/gtest.h"
 #include "gmock/gmock.h"
 
-#include "Inc/cortex-m_port.h"
-#include "Inc/cortex-m_registers.h"
-#include "Inc/syscall_idx.h"
+#include "Inc/core/cortex-m_port.h"
+#include "Inc/core/cortex-m_registers.h"
+#include "Inc/core/syscall_idx.h"
 #include "Test/Inc/MockKernel.h"
 #include "Test/Inc/MockAssert.h"
 
@@ -32,6 +32,7 @@ using ::testing::AtLeast;
 using ::testing::InSequence;
 using ::testing::StrEq;
 using ::testing::_;
+using ::testing::Ref;
 
 using std::uint8_t;
 using std::uint16_t;
@@ -39,17 +40,17 @@ using std::uint32_t;
 using std::unique_ptr;
 using std::make_unique;
 
-using OS::g_kernel;
 using OS::SyscallIdx;
 using OS::auto_task_stack_frame;
 using OS::Priority;
-using OS::Blockable;
+using OS::Lockable;
 using Hw::g_SCB;
 using Hw::SCB_t;
 using Hw::g_SysTick;
 using Hw::SysTick_t;
 using Hw::MCU;
 
+namespace Hw {
 class MCUWithLowLevelMock: public Hw::MCU {
  public:
   MOCK_METHOD(void, DisableInterruptsInternal, (), (const));
@@ -60,7 +61,7 @@ class MCUTest: public ::testing::Test {
  private:
   void SetUp() override {
     mcu = make_unique<MCUWithLowLevelMock>();
-    g_kernel = &kernel;
+    kernel = make_unique<StrictMock<MockKernel>>(mcu.get());
     g_SCB = &scb;
     g_SysTick = &systick;
     g_platform = &platform;
@@ -75,10 +76,10 @@ class MCUTest: public ::testing::Test {
   }
 
   std::atomic_uint32_t& GetNestedInterruptLevel() {
-    return mcu->nested_interrupt_level;
+    return mcu->m_nested_interrupt_level;
   }
 
-  StrictMock<MockKernel> kernel;
+  unique_ptr<StrictMock<MockKernel>> kernel;
   SCB_t scb;
   SysTick_t systick;
   unique_ptr<MCUWithLowLevelMock> mcu;
@@ -101,7 +102,7 @@ TEST_F(MCUTest, HandleSVC_StartOS_Test) {
   frame.pc = (uint32_t)(&StartOS_SVC) + sizeof(uint16_t);
   frame.xpsr = 0;
 
-  EXPECT_CALL(kernel, StartOS()).Times(1).RetiresOnSaturation();
+  EXPECT_CALL(*kernel, StartOS()).Times(1).RetiresOnSaturation();
   HandleSVC(&frame);
 }
 
@@ -129,7 +130,7 @@ TEST_F(MCUTest, HandleSVC_CreateTask_Test) {
   callStack.data[0] = (uint32_t)name;
   callStack.data[1] = (uint32_t)stack_size;
 
-  EXPECT_CALL(kernel, CreateTask(testfunc, arg, prio, name, stack_size))
+  EXPECT_CALL(*kernel, CreateTask(testfunc, arg, prio, name, stack_size))
       .Times(1).RetiresOnSaturation();
   HandleSVC(&callStack.frame);
 
@@ -138,7 +139,7 @@ TEST_F(MCUTest, HandleSVC_CreateTask_Test) {
 
   callStack.data[1] = (uint32_t)name;
   callStack.data[2] = (uint32_t)stack_size;
-  EXPECT_CALL(kernel, CreateTask(testfunc, arg, prio, StrEq(name), stack_size))
+  EXPECT_CALL(*kernel, CreateTask(testfunc, arg, prio, StrEq(name), stack_size))
       .Times(1).RetiresOnSaturation();
   HandleSVC(&callStack.frame);
 }
@@ -152,7 +153,7 @@ TEST_F(MCUTest, HandleSVC_Sleep_Test) {
   constexpr uint32_t sleep_time_ms = 1234;
   callStack.frame.r1 = sleep_time_ms;
 
-  EXPECT_CALL(kernel, Sleep(sleep_time_ms)).Times(1).RetiresOnSaturation();
+  EXPECT_CALL(*kernel, Sleep(sleep_time_ms)).Times(1).RetiresOnSaturation();
   HandleSVC(&callStack.frame);
 }
 
@@ -162,7 +163,7 @@ TEST_F(MCUTest, HandleSVC_DestroyTask_Test) {
   callStack.frame.pc = (uint32_t)(&SVC) + sizeof(uint16_t);
   callStack.frame.xpsr = 0;
 
-  EXPECT_CALL(kernel, DestroyTask()).Times(1).RetiresOnSaturation();
+  EXPECT_CALL(*kernel, DestroyTask()).Times(1).RetiresOnSaturation();
   HandleSVC(&callStack.frame);
 }
 
@@ -172,7 +173,7 @@ TEST_F(MCUTest, HandleSVC_Yield_Test) {
   callStack.frame.pc = (uint32_t)(&SVC) + sizeof(uint16_t);
   callStack.frame.xpsr = 0;
 
-  EXPECT_CALL(kernel, Yield()).Times(1).RetiresOnSaturation();
+  EXPECT_CALL(*kernel, Yield()).Times(1).RetiresOnSaturation();
   HandleSVC(&callStack.frame);
 }
 
@@ -182,10 +183,10 @@ TEST_F(MCUTest, HandleSVC_Wait_Test) {
   callStack.frame.pc = (uint32_t)(&SVC) + sizeof(uint16_t);
   callStack.frame.xpsr = 0;
 
-  Blockable blockable;
-  callStack.frame.r1 = (uint32_t)&blockable;
+  Lockable lockable;
+  callStack.frame.r1 = (uint32_t)&lockable;
 
-  EXPECT_CALL(kernel, Wait(&blockable)).Times(1).RetiresOnSaturation();
+  EXPECT_CALL(*kernel, Wait(Ref(lockable))).Times(1).RetiresOnSaturation();
   HandleSVC(&callStack.frame);
 }
 
@@ -195,7 +196,7 @@ TEST_F(MCUTest, HandleSVC_RegisterError_Test) {
   callStack.frame.pc = (uint32_t)(&SVC) + sizeof(uint16_t);
   callStack.frame.xpsr = 0;
 
-  EXPECT_CALL(kernel, RegisterError(&callStack.frame))
+  EXPECT_CALL(*kernel, RegisterError())
     .Times(1).RetiresOnSaturation();
   HandleSVC(&callStack.frame);
 }
@@ -206,7 +207,7 @@ TEST_F(MCUTest, HandleSVC_Unknown_Test) {
   callStack.frame.pc = (uint32_t)(&SVC) + sizeof(uint16_t);
   callStack.frame.xpsr = 0;
 
-  EXPECT_CALL(kernel, RegisterError(&callStack.frame))
+  EXPECT_CALL(*kernel, RegisterError())
     .Times(1).RetiresOnSaturation();
   HandleSVC(&callStack.frame);
 }
@@ -217,17 +218,17 @@ TEST_F(MCUTest, HandleSVC_Lock_Test) {
   callStack.frame.pc = (uint32_t)(&SVC) + sizeof(uint16_t);
   callStack.frame.xpsr = 0;
 
-  Blockable blockable;
-  callStack.frame.r1 = (uint32_t)&blockable;
+  Lockable lockable;
+  callStack.frame.r1 = (uint32_t)&lockable;
   callStack.frame.r2 = (uint32_t)true;
 
-  EXPECT_CALL(kernel, Lock(&blockable, true)).Times(1).RetiresOnSaturation();
+  EXPECT_CALL(*kernel, Lock(Ref(lockable), true)).Times(1).RetiresOnSaturation();
   HandleSVC(&callStack.frame);
 
-  callStack.frame.r1 = (uint32_t)&blockable;
+  callStack.frame.r1 = (uint32_t)&lockable;
   callStack.frame.r2 = (uint32_t)false;
 
-  EXPECT_CALL(kernel, Lock(&blockable, false)).Times(1).RetiresOnSaturation();
+  EXPECT_CALL(*kernel, Lock(Ref(lockable), false)).Times(1).RetiresOnSaturation();
   HandleSVC(&callStack.frame);
 }
 
@@ -244,18 +245,16 @@ TEST_F(MCUTest, EnableDisableInterrupts) {
   mcu->DisableInterrupts();
   EXPECT_EQ(nested_interrupt_level, 2U);
 
-  EXPECT_CALL(platform, Assert(_, _, true)).RetiresOnSaturation();
   mcu->EnableInterrupts();
   EXPECT_EQ(nested_interrupt_level, 1U);
 
-  EXPECT_CALL(platform, Assert(_, _, true)).RetiresOnSaturation();
   EXPECT_CALL(*mcu, EnableInterruptsInternal());
   mcu->EnableInterrupts();
   EXPECT_EQ(nested_interrupt_level, 0U);
 }
 
 TEST_F(MCUTest, EnableInterruptsNotPreviouslyDisabled) {
-  EXPECT_CALL(platform, Assert(_, _, false));
+  EXPECT_CALL(platform, Assert(_));
   mcu->EnableInterrupts();
 }
 
@@ -271,3 +270,4 @@ TEST_F(MCUTest, Initialize) {
 
   EXPECT_TRUE(scb.CCR & Hw::SCB_CCR_STKALIGN);
 }
+}  // namespace Hw

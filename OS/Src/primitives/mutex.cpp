@@ -15,26 +15,31 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef OS_INC_MUTEX_H_
-#define OS_INC_MUTEX_H_
+// This is an open source non-commercial project. Dear PVS-Studio, please check it.
+// PVS-Studio Static Code Analyzer for C, C++, C#, and Java: http://www.viva64.com
 
-#include <atomic>
-
-#include "Inc/blockable.h"
-
-class MutexTest;
+#include "Inc/primitives/mutex.h"
 
 namespace OS {
-class Mutex: Blockable {
- public:
-  Mutex();
-  void Lock();
-  void Unlock();
+Mutex::Mutex() {
+  m_held.clear();
+}
 
- private:
-  std::atomic_flag m_held;
-  friend MutexTest;
-};
+void Mutex::Lock() {
+  bool was_already_held = m_held.test_and_set();
+
+  // If the lock wasn't available
+  // try again after blocking the task
+  while (was_already_held) {
+    Block();
+    was_already_held = m_held.test_and_set();
+  }
+  LockAcquired();
+}
+
+void Mutex::Unlock() {
+  m_held.clear();
+  LockReleased();
+}
+
 }  // namespace OS
-
-#endif  // OS_INC_MUTEX_H_

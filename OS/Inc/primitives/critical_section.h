@@ -15,12 +15,15 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "Test/Inc/MockAssert.h"
+#ifndef OS_INC_PRIMITIVES_CRITICAL_SECTION_H_
+#define OS_INC_PRIMITIVES_CRITICAL_SECTION_H_
 
-Platform* g_platform = nullptr;
+namespace OS {
+class CriticalSection {
+ public:
+  CriticalSection();
+  ~CriticalSection();
+};
+}  // namespace OS
 
-void AteAssertFailed(std::uintptr_t PC) {
-  if (g_platform != nullptr) {
-    g_platform->Assert(PC);
-  }
-}
+#endif  // OS_INC_PRIMITIVES_CRITICAL_SECTION_H_

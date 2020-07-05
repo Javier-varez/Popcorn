@@ -1,17 +1,17 @@
-/* 
+/*
  * This file is part of the Cortex-M Scheduler
  * Copyright (c) 2020 Javier Alvarez
- * 
- * This program is free software: you can redistribute it and/or modify  
- * it under the terms of the GNU General Public License as published by  
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, version 3.
  *
- * This program is distributed in the hope that it will be useful, but 
- * WITHOUT ANY WARRANTY; without even the implied warranty of 
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU 
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
  * General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License 
+ * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
@@ -19,12 +19,16 @@
 // PVS-Studio Static Code Analyzer for C, C++, C#, and Java: http://www.viva64.com
 
 #include <stm32f1xx_hal.h>
+
+#include <cstring>
 #include <memory>
 
-#include "Inc/syscall.h"
-#include "Inc/mutex.h"
-#include "Inc/unique_lock.h"
-#include "Inc/kernel.h"
+#include "Inc/API/syscall.h"
+#include "Inc/primitives/mutex.h"
+#include "Inc/primitives/unique_lock.h"
+
+// Used for Internal Hooks
+#include "Inc/core/kernel.h"
 
 #include "Inc/uart.h"
 
@@ -59,14 +63,6 @@ void OS::Kernel::TriggerSchedulerExitHook() {
   constexpr uint32_t PIN_1 = 1;
   constexpr uint32_t CLEAR_OFFSET = 16;
   GPIOA->BSRR = 1 << (CLEAR_OFFSET + PIN_1);  // GPIOA1 = 0
-}
-
-void OS::Kernel::HandleErrorHook(uint32_t pc, uint32_t r0, uint32_t r1,
-                                 uint32_t r2, uint32_t r3, uint32_t sp) {
-  constexpr uint32_t kStrLength = 100;
-  char buf[kStrLength];
-  snprintf(buf, kStrLength, "Error detected at pc 0x%08lx", pc);
-  uart.Send(buf);
 }
 
 struct TaskArgs {
@@ -130,6 +126,13 @@ static void ConfigureClk() {
   clkInit.APB2CLKDivider = RCC_HCLK_DIV1;
 
   HAL_RCC_ClockConfig(&clkInit, FLASH_ACR_LATENCY_2);
+}
+
+void AteAssertFailed(std::uintptr_t PC) {
+  constexpr unsigned int kLen = 30;
+  char str[kLen];
+  snprintf(str, kLen, "ASSERT 0x%08x\r\n", PC);
+  uart.Send(str);
 }
 
 void InitTask(void *args) {

@@ -30,8 +30,8 @@ class MemManagement {
 
 class MockMemManagement: public MemManagement {
  public:
-  MOCK_METHOD1(Malloc, void*(std::size_t));
-  MOCK_METHOD1(Free, void(void*));
+  MOCK_METHOD(void*, Malloc, (std::size_t));
+  MOCK_METHOD(void, Free, (void*));
   virtual ~MockMemManagement() {}
 };
 

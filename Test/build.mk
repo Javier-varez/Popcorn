@@ -39,12 +39,14 @@ LOCAL_CFLAGS := \
 LOCAL_CXXFLAGS := \
 	$(LOCAL_CFLAGS)
 TEST_SRC := \
-	$(LOCAL_DIR)/../OS/Src/syscalls.cpp \
-	$(LOCAL_DIR)/../OS/Src/cortex-m_port.cpp \
-	$(LOCAL_DIR)/../OS/Src/kernel.cpp \
-	$(LOCAL_DIR)/../OS/Src/linked_list.c \
-	$(LOCAL_DIR)/../OS/Src/spinlock.cpp \
-	$(LOCAL_DIR)/../OS/Src/mutex.cpp
+	$(LOCAL_DIR)/../OS/Src/core/syscalls.cpp \
+	$(LOCAL_DIR)/../OS/Src/core/cortex-m_port.cpp \
+	$(LOCAL_DIR)/../OS/Src/core/kernel.cpp \
+	$(LOCAL_DIR)/../OS/Src/core/lockable.cpp \
+	$(LOCAL_DIR)/../OS/Src/utils/linked_list.c \
+	$(LOCAL_DIR)/../OS/Src/primitives/spinlock.cpp \
+	$(LOCAL_DIR)/../OS/Src/primitives/mutex.cpp \
+	$(LOCAL_DIR)/../OS/Src/primitives/critical_section.cpp
 
 LOCAL_SRC := \
 	$(TEST_SRC) \

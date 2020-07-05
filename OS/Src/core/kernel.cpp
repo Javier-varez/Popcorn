@@ -1,17 +1,17 @@
-/* 
+/*
  * This file is part of the Cortex-M Scheduler
  * Copyright (c) 2020 Javier Alvarez
- * 
- * This program is free software: you can redistribute it and/or modify  
- * it under the terms of the GNU General Public License as published by  
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, version 3.
  *
- * This program is distributed in the hope that it will be useful, but 
- * WITHOUT ANY WARRANTY; without even the implied warranty of 
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU 
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
  * General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License 
+ * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
@@ -21,18 +21,19 @@
 #include <cstddef>
 #include <cstring>
 
-#include "Inc/kernel.h"
-#include "Inc/cortex-m_port.h"
-#include "Inc/memory_management.h"
-#include "Inc/critical_section.h"
-#include "Inc/syscall_idx.h"
+#include "Inc/core/kernel.h"
+#include "Inc/core/cortex-m_port.h"
+#include "Inc/core/syscall_idx.h"
+#include "Inc/core/lockable.h"
+
+#include "Inc/utils/memory_management.h"
+
+#include "Inc/primitives/critical_section.h"
 
 using std::uint8_t;
 using std::uint32_t;
 using std::uint64_t;
 using std::uintptr_t;
-
-using Hw::g_mcu;
 
 namespace OS {
 Kernel* g_kernel = nullptr;
@@ -54,9 +55,12 @@ static uint8_t* AllocateTaskStack(task_control_block *tcb,
   return task_stack_top;
 }
 
+/**
+ * @todo Move this function to MCU Port
+ */
 static uint8_t* AllocateTaskStackFrame(uint8_t* stack_ptr) {
   if (stack_ptr == nullptr) {
-      return nullptr;
+    return nullptr;
   }
 
   auto* stack_frame = stack_ptr - sizeof(auto_task_stack_frame);
@@ -66,6 +70,9 @@ static uint8_t* AllocateTaskStackFrame(uint8_t* stack_ptr) {
   return reinterpret_cast<uint8_t*>(stack_frame_ptr & 0xfffffff8);
 }
 
+/**
+ * @todo Move this function to MCU Port
+ */
 static task_stack_frame*
 AllocateCompleteTaskStackFrame(uint8_t* stack_ptr) {
   uint8_t* ptr = AllocateTaskStackFrame(stack_ptr);
@@ -77,10 +84,16 @@ AllocateCompleteTaskStackFrame(uint8_t* stack_ptr) {
   }
 }
 
+/**
+ * @todo Move this function to MCU Port
+ */
 void DestroyTaskVeneer() {
   Syscall::Instance().DestroyTask();
 }
 
+/**
+ * @todo Move this function to MCU Port
+ */
 static void InitializeTask(task_stack_frame* stack_frame_ptr,
                            task_func func,
                            void* arg) {
@@ -137,15 +150,18 @@ void IdleTask(void *arg) {
 }
 
 void Kernel::StartOS() {
-  // Create Idle Task
+  // The idle task will run whenever there is no other
+  // good candidate to run. It has the lowest priority.
   CreateTask(IdleTask,
-             0,
+             nullptr,
              Priority::IDLE,
              "Idle",
              MINIMUM_TASK_STACK_SIZE);
 
-  g_mcu->Initialize();
-  g_mcu->TriggerPendSV();
+  // Configure interrupts and priorities.
+  m_mcu->Initialize();
+  // Trigger a context change to schedule the first task.
+  m_mcu->TriggerPendSV();
 }
 
 uint64_t Kernel::GetTicks() {
@@ -162,7 +178,7 @@ void Kernel::Sleep(uint32_t num_ticks) {
   LinkedList_RemoveEntry(m_ready_list, tcb, list);
   LinkedList_AddEntry(m_sleeping_list, tcb, list);
 
-  g_mcu->TriggerPendSV();
+  m_mcu->TriggerPendSV();
 }
 
 void Kernel::DestroyTask() {
@@ -178,72 +194,82 @@ void Kernel::DestroyTask() {
 
   m_current_task = nullptr;
 
-  g_mcu->TriggerPendSV();
+  // Scheduler needs to select another task to run
+  m_mcu->TriggerPendSV();
 }
 
 void Kernel::Yield() {
-  g_mcu->TriggerPendSV();
+  // Scheduler needs to run and check which task to run
+  m_mcu->TriggerPendSV();
 }
 
-void Kernel::Wait(const Blockable* blockable) {
+void Kernel::Wait(const Lockable& lockable) {
   task_control_block* tcb = m_current_task;
 
   // Send task to the blocked state
   tcb->state = task_state::BLOCKED;
-  tcb->blockArgument.blockable = blockable;
+  tcb->blockArgument.lockable = &lockable;
 
-  // Perform priority inheritance
-  if (blockable->m_blocker->priority < m_current_task->priority) {
-    blockable->m_blocker->priority = m_current_task->priority;
+  auto *blocker_task = lockable.GetBlockerTask();
+  ATE_ASSERT(nullptr != blocker_task);
+  if (blocker_task->priority < m_current_task->priority) {
+    /* Inherit priority */
+    blocker_task->priority = m_current_task->priority;
   }
 
-  // Switch list
+  // Take the current task from the ready list and move it to the
+  // blocked list
   LinkedList_RemoveEntry(m_ready_list, tcb, list);
   LinkedList_AddEntry(m_blocked_list, tcb, list);
 
-  g_mcu->TriggerPendSV();
+  // Scheduler needs to select another task to run as
+  // priorities may have changed and the current task is not
+  // in a runnable state anymore.
+  m_mcu->TriggerPendSV();
 }
 
-void Kernel::Lock(Blockable* blockable, bool acquired) {
+void Kernel::Lock(Lockable& lockable, bool acquired) {
   if (acquired) {
-    blockable->m_blocker = m_current_task;
+    lockable.SetBlockerTask(m_current_task);
   } else {
     // Restore original priority of the blocker
-    blockable->m_blocker->priority = blockable->m_blocker->base_priority;
-    blockable->m_blocker = nullptr;
+    auto *blocker_task = lockable.GetBlockerTask();
+    ATE_ASSERT(nullptr != blocker_task);
+    blocker_task->priority = blocker_task->base_priority;
+    lockable.SetBlockerTask(nullptr);
+
     // Bring back blocked tasks by this resource
     task_control_block *tcb = nullptr;
     task_control_block *tcb_next = nullptr;
 
     LinkedList_WalkEntry_Safe(m_blocked_list, tcb, tcb_next, list) {
-      if (tcb->blockArgument.blockable == blockable) {
+      // Walk through the list and make sure that all the
+      // tasks that were blocked by this resource are now
+      // ready to run.
+      // This means removing them from the blocked list and
+      // adding them back to the ready list.
+      //
+      // Using LinkedList_WalkEntry_Safe because we are removing
+      // elements of the list inside the loop
+      if (tcb->blockArgument.lockable == &lockable) {
         LinkedList_RemoveEntry(m_blocked_list, tcb, list);
         LinkedList_AddEntry(m_ready_list, tcb, list);
         tcb->state = task_state::READY;
       }
     }
 
-    g_mcu->TriggerPendSV();
+    m_mcu->TriggerPendSV();
   }
 }
 
-void Kernel::RegisterError(auto_task_stack_frame* args) {
-  uint32_t pc = args->lr;
-  auto next_task_stack_frame = args + 1;
-  uint32_t sp = reinterpret_cast<uint32_t>(next_task_stack_frame);
-  HandleErrorHook(pc, args->r0, args->r1, args->r2, args->r3, sp);
-}
+/**
+ * @todo Implement this method to report the failures
+ */
+void Kernel::RegisterError() { }
 
 __WEAK void Kernel::TriggerSchedulerEntryHook() { }
 
 __WEAK void Kernel::TriggerSchedulerExitHook() { }
-
-__WEAK void Kernel::HandleErrorHook(uint32_t pc,
-                                    uint32_t r0,
-                                    uint32_t r1,
-                                    uint32_t r2,
-                                    uint32_t r3,
-                                    uint32_t sp) { }
 
 void Kernel::TriggerScheduler() {
   TriggerSchedulerEntryHook();
@@ -299,10 +325,12 @@ void Kernel::HandleTick() {
     m_ticks++;
   }
   CheckTaskNeedsAwakening();
-  g_mcu->TriggerPendSV();
+  m_mcu->TriggerPendSV();
 }
 
-Kernel::Kernel() {
+Kernel::Kernel(Hw::MCU* mcu) :
+    m_mcu(mcu) {
+  m_mcu->RegisterSyscallImpl(this);
   g_kernel = this;
 }
 

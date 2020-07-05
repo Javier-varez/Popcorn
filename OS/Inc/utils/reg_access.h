@@ -15,25 +15,31 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-// This is an open source non-commercial project. Dear PVS-Studio, please check it.
-// PVS-Studio Static Code Analyzer for C, C++, C#, and Java: http://www.viva64.com
+#ifndef OS_INC_UTILS_REG_ACCESS_H_
+#define OS_INC_UTILS_REG_ACCESS_H_
 
-#include "Inc/linked_list.h"
+#include <cstdint>
 
-void LinkedList_RemoveElement(LinkedList_t** head, LinkedList_t* element) {
-  while (*head != NULL) {
-    if (*head == element) {
-      *head = element->next;
-      break;
-    }
-    head = &(*head)->next;
+namespace Hw {
+
+class RegAccess {
+ public:
+  using Register = volatile std::uint32_t*;
+
+  static void Write(Register addr, std::uint32_t value) {
+    *addr = value;
   }
-}
 
-void LinkedList_AddElement(LinkedList_t** head, LinkedList_t* element) {
-  while (*head != NULL) {
-    head = &(*head)->next;
+  static std::uint32_t Read(Register addr) {
+    return *addr;
   }
-  *head = element;
-  element->next = NULL;
-}
+
+  static void Modify(Register addr, std::uint32_t mask, std::uint32_t value) {
+    std::uint32_t temp = *addr;
+    *addr = (temp & mask) | value;
+  }
+};
+
+}  // namespace Hw
+
+#endif  // OS_INC_UTILS_REG_ACCESS_H_

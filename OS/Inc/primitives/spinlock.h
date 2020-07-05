@@ -15,8 +15,8 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef OS_INC_SPINLOCK_H_
-#define OS_INC_SPINLOCK_H_
+#ifndef OS_INC_PRIMITIVES_SPINLOCK_H_
+#define OS_INC_PRIMITIVES_SPINLOCK_H_
 
 #include <atomic>
 
@@ -34,4 +34,4 @@ class SpinLock {
 };
 }  // namespace OS
 
-#endif  // OS_INC_SPINLOCK_H_
+#endif  // OS_INC_PRIMITIVES_SPINLOCK_H_

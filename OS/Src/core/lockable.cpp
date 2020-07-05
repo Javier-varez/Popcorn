@@ -18,29 +18,29 @@
 // This is an open source non-commercial project. Dear PVS-Studio, please check it.
 // PVS-Studio Static Code Analyzer for C, C++, C#, and Java: http://www.viva64.com
 
-#include "Inc/mutex.h"
-#include "Inc/kernel.h"
+#include "Inc/core/lockable.h"
+#include "Inc/API/syscall.h"
 
 namespace OS {
-Mutex::Mutex() {
-  m_held.clear();
+
+void Lockable::Block() {
+  Syscall::Instance().Wait(*this);
 }
 
-void Mutex::Lock() {
-  bool was_already_held = m_held.test_and_set();
-
-  // If the lock wasn't available
-  // try again after blocking the task
-  while (was_already_held) {
-    Block();
-    was_already_held = m_held.test_and_set();
-  }
-  LockAcquired();
+void Lockable::LockAcquired() {
+  Syscall::Instance().Lock(*this, true);
 }
 
-void Mutex::Unlock() {
-  m_held.clear();
-  LockReleased();
+void Lockable::LockReleased() {
+  Syscall::Instance().Lock(*this, false);
+}
+
+void Lockable::SetBlockerTask(task_control_block* tcb) {
+  m_blocker = tcb;
+}
+
+task_control_block* Lockable::GetBlockerTask() const {
+  return m_blocker;
 }
 
 }  // namespace OS

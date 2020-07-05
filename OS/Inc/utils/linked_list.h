@@ -17,8 +17,8 @@
 
 // -V:LinkedList_WalkEntry_Safe:623
 
-#ifndef OS_INC_LINKED_LIST_H_
-#define OS_INC_LINKED_LIST_H_
+#ifndef OS_INC_UTILS_LINKED_LIST_H_
+#define OS_INC_UTILS_LINKED_LIST_H_
 
 #include <stddef.h>
 
@@ -61,4 +61,4 @@ void LinkedList_AddElement(LinkedList_t** head, LinkedList_t* element);
 }
 #endif
 
-#endif  // OS_INC_LINKED_LIST_H_
+#endif  // OS_INC_UTILS_LINKED_LIST_H_

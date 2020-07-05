@@ -15,12 +15,27 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "Test/Inc/MockAssert.h"
+// This is an open source non-commercial project. Dear PVS-Studio, please check it.
+// PVS-Studio Static Code Analyzer for C, C++, C#, and Java: http://www.viva64.com
 
-Platform* g_platform = nullptr;
+#include "Inc/primitives/critical_section.h"
 
-void AteAssertFailed(std::uintptr_t PC) {
-  if (g_platform != nullptr) {
-    g_platform->Assert(PC);
+#include "Inc/core/cortex-m_port.h"
+
+namespace Hw {
+  extern MCU* g_mcu;
+}  // namespace Hw
+
+namespace OS {
+CriticalSection::CriticalSection() {
+  if (Hw::g_mcu) {
+    Hw::g_mcu->DisableInterrupts();
   }
 }
+
+CriticalSection::~CriticalSection() {
+  if (Hw::g_mcu) {
+    Hw::g_mcu->EnableInterrupts();
+  }
+}
+}  // namespace OS

@@ -24,7 +24,7 @@
 #include "gmock/gmock.h"
 
 #include "Test/Inc/MockMCU.h"
-#include "Inc/spinlock.h"
+#include "Inc/primitives/spinlock.h"
 
 using testing::StrictMock;
 using testing::InSequence;

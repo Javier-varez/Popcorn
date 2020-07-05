@@ -1,17 +1,17 @@
-/* 
+/*
  * This file is part of the Cortex-M Scheduler
  * Copyright (c) 2020 Javier Alvarez
- * 
- * This program is free software: you can redistribute it and/or modify  
- * it under the terms of the GNU General Public License as published by  
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, version 3.
  *
- * This program is distributed in the hope that it will be useful, but 
- * WITHOUT ANY WARRANTY; without even the implied warranty of 
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU 
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
  * General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License 
+ * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
@@ -22,8 +22,8 @@
 
 #include "Test/Inc/MockMCU.h"
 #include "Test/Inc/MockMemManagement.h"
-#include "Inc/kernel.h"
-#include "Inc/syscall_idx.h"
+#include "Inc/core/kernel.h"
+#include "Inc/core/syscall_idx.h"
 
 using ::testing::StrictMock;
 using ::testing::Return;
@@ -43,8 +43,10 @@ using OS::task_stack_frame;
 using OS::Kernel;
 using OS::Priority;
 using OS::task_state;
-using OS::Blockable;
+using OS::Lockable;
 using OS::SyscallIdx;
+
+using Hw::g_svc;
 
 class KernelTest: public ::testing::Test {
  public:
@@ -52,9 +54,10 @@ class KernelTest: public ::testing::Test {
 
  private:
   void SetUp() override {
-    Hw::g_mcu = &mcu;
     g_MockMemManagement = &memManagement;
-    kernel = make_unique<Kernel>();
+    g_svc = &svc;
+    EXPECT_CALL(mcu, RegisterSyscallImpl(_));
+    kernel = make_unique<Kernel>(&mcu);
 
     memset(idleStack, 0xA5, sizeof(idleStack));
     memset(task1Stack, 0xA5, sizeof(task1Stack));
@@ -68,6 +71,7 @@ class KernelTest: public ::testing::Test {
 
   void TearDown() override {
     g_MockMemManagement = nullptr;
+    g_svc = nullptr;
   }
 
  protected:
@@ -123,6 +127,7 @@ class KernelTest: public ::testing::Test {
 
   StrictMock<MockMCU> mcu;
   StrictMock<MockMemManagement> memManagement;
+  StrictMock<MockSVC> svc;
   unique_ptr<Kernel> kernel;
   static uint8_t idleStack[MINIMUM_TASK_STACK_SIZE];
   static uint8_t task1Stack[kStackSize];
@@ -400,7 +405,7 @@ TEST_F(KernelTest, Sleep_Test) {
 }
 
 namespace {
-class FakeBlock: public Blockable {
+class FakeBlock: public Lockable {
  public:
   explicit FakeBlock(Kernel* kernel) :
     m_kernel(kernel) { }
@@ -408,18 +413,18 @@ class FakeBlock: public Blockable {
   void Lock() {
     if (m_blocked) {
       Block();
-      m_kernel->Wait(this);
+      m_kernel->Wait(*this);
     } else {
       m_blocked = true;
       LockAcquired();
-      m_kernel->Lock(this, true);
+      m_kernel->Lock(*this, true);
     }
   }
 
   void Unlock() {
     m_blocked = false;
     LockReleased();
-    m_kernel->Lock(this, false);
+    m_kernel->Lock(*this, false);
   }
 
  private:
@@ -458,20 +463,20 @@ TEST_F(KernelTest, Wait_Test) {
   kernel->CreateTask(TaskFunction, &arg, Priority::Level_3,
                      "TestTask2", kStackSize);
 
-  EXPECT_CALL(mcu, SupervisorCall(SyscallIdx::Lock));
+  EXPECT_CALL(svc, SupervisorCall(SyscallIdx::Lock));
   block.Lock();
 
   TriggerScheduler();
   EXPECT_EQ(GetCurrentTask(), &task2TCB);
 
-  EXPECT_CALL(mcu, SupervisorCall(SyscallIdx::Wait));
+  EXPECT_CALL(svc, SupervisorCall(SyscallIdx::Wait));
   EXPECT_CALL(mcu, TriggerPendSV()).Times(1).RetiresOnSaturation();
   block.Lock();
 
   TriggerScheduler();
   EXPECT_EQ(GetCurrentTask(), &task1TCB);
 
-  EXPECT_CALL(mcu, SupervisorCall(SyscallIdx::Lock));
+  EXPECT_CALL(svc, SupervisorCall(SyscallIdx::Lock));
   EXPECT_CALL(mcu, TriggerPendSV()).Times(1).RetiresOnSaturation();
   block.Unlock();
 
@@ -502,7 +507,7 @@ TEST_F(KernelTest, Priority_Test) {
   EXPECT_NE(GetCurrentTask(), nullptr);
   EXPECT_STREQ(GetCurrentTask()->name, "TestTask1");
 
-  EXPECT_CALL(mcu, SupervisorCall(SyscallIdx::Lock));
+  EXPECT_CALL(svc, SupervisorCall(SyscallIdx::Lock));
   block.Lock();
 
   EXPECT_CALL(memManagement, Malloc(sizeof(task_control_block)))
@@ -515,7 +520,7 @@ TEST_F(KernelTest, Priority_Test) {
   TriggerScheduler();
   EXPECT_EQ(GetCurrentTask(), &task2TCB);
 
-  EXPECT_CALL(mcu, SupervisorCall(SyscallIdx::Wait));
+  EXPECT_CALL(svc, SupervisorCall(SyscallIdx::Wait));
   EXPECT_CALL(mcu, TriggerPendSV()).Times(1).RetiresOnSaturation();
   block.Lock();
 
@@ -532,7 +537,7 @@ TEST_F(KernelTest, Priority_Test) {
   TriggerScheduler();
   EXPECT_EQ(GetCurrentTask(), &task1TCB);
 
-  EXPECT_CALL(mcu, SupervisorCall(SyscallIdx::Lock));
+  EXPECT_CALL(svc, SupervisorCall(SyscallIdx::Lock));
   EXPECT_CALL(mcu, TriggerPendSV()).Times(1).RetiresOnSaturation();
   block.Unlock();
 
@@ -596,7 +601,7 @@ TEST_F(KernelTest, PriorityInheritanceAvoidsPriorityInversion_Test) {
   EXPECT_EQ(GetCurrentTask(), &task1TCB);
 
   // Task 1 takes the mutex
-  EXPECT_CALL(mcu, SupervisorCall(SyscallIdx::Lock));
+  EXPECT_CALL(svc, SupervisorCall(SyscallIdx::Lock));
   mutex.Lock();
 
   CreateTask(Priority::Level_1, &task2TCB, task2Stack);
@@ -610,7 +615,7 @@ TEST_F(KernelTest, PriorityInheritanceAvoidsPriorityInversion_Test) {
   EXPECT_EQ(GetCurrentTask(), &task3TCB);
 
   // Task 3 attempts to take the mutex
-  EXPECT_CALL(mcu, SupervisorCall(SyscallIdx::Wait));
+  EXPECT_CALL(svc, SupervisorCall(SyscallIdx::Wait));
   EXPECT_CALL(mcu, TriggerPendSV());
   mutex.Lock();
 
@@ -622,7 +627,7 @@ TEST_F(KernelTest, PriorityInheritanceAvoidsPriorityInversion_Test) {
   EXPECT_EQ(GetCurrentTask(), &task1TCB);
 
   // Task 1 unlocks the mutex and task 3 resumes execution
-  EXPECT_CALL(mcu, SupervisorCall(SyscallIdx::Lock));
+  EXPECT_CALL(svc, SupervisorCall(SyscallIdx::Lock));
   EXPECT_CALL(mcu, TriggerPendSV());
   mutex.Unlock();
 

@@ -15,27 +15,26 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef OS_INC_BLOCKABLE_H_
-#define OS_INC_BLOCKABLE_H_
+#ifndef OS_INC_PRIMITIVES_MUTEX_H_
+#define OS_INC_PRIMITIVES_MUTEX_H_
 
-#include "Inc/syscall.h"
+#include <atomic>
+
+#include "Inc/core/lockable.h"
+
+class MutexTest;
 
 namespace OS {
-// Mutex, lists, etc, must be sublcass of Blockable
-class Blockable {
- protected:
-  void Block() {
-    Syscall::Instance().Wait(*this);
-  }
-  void LockAcquired() {
-    Syscall::Instance().Lock(*this, true);
-  }
-  void LockReleased() {
-    Syscall::Instance().Lock(*this, false);
-  }
-  struct task_control_block *m_blocker;
-  friend class Kernel;
+class Mutex: Lockable {
+ public:
+  Mutex();
+  void Lock();
+  void Unlock();
+
+ private:
+  std::atomic_flag m_held;
+  friend MutexTest;
 };
 }  // namespace OS
 
-#endif  // OS_INC_BLOCKABLE_H_
+#endif  // OS_INC_PRIMITIVES_MUTEX_H_

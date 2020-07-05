@@ -15,25 +15,20 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-// This is an open source non-commercial project. Dear PVS-Studio, please check it.
-// PVS-Studio Static Code Analyzer for C, C++, C#, and Java: http://www.viva64.com
-
-#include "Inc/spinlock.h"
-#include "Inc/syscall.h"
+#ifndef OS_INC_CORE_SYSCALL_IDX_H_
+#define OS_INC_CORE_SYSCALL_IDX_H_
 
 namespace OS {
-SpinLock::SpinLock() {
-  m_held.clear();
-}
-
-void SpinLock::Lock() {
-  bool was_already_held;
-  do {
-    was_already_held = m_held.test_and_set();
-  } while (was_already_held);
-}
-
-void SpinLock::Unlock() {
-  m_held.clear();
-}
+enum class SyscallIdx {
+  StartOS,
+  CreateTask,
+  Sleep,
+  DestroyTask,
+  Yield,
+  Wait,
+  RegisterError,
+  Lock
+};
 }  // namespace OS
+
+#endif  // OS_INC_CORE_SYSCALL_IDX_H_

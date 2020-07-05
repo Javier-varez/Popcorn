@@ -16,7 +16,10 @@ LOCAL_CXXFLAGS := \
 	-fno-rtti
 LOCAL_SRC := \
 	$(wildcard $(LOCAL_DIR)/Src/*.c) \
-	$(wildcard $(LOCAL_DIR)/Src/*.cpp)	
+	$(wildcard $(LOCAL_DIR)/Src/*/*.c) \
+	$(wildcard $(LOCAL_DIR)/Src/*.cpp) \
+	$(wildcard $(LOCAL_DIR)/Src/*/*.cpp)
+
 LOCAL_EXPORTED_DIRS := \
 	$(LOCAL_DIR)
 LOCAL_ARFLAGS := -rcs

@@ -18,26 +18,22 @@
 // This is an open source non-commercial project. Dear PVS-Studio, please check it.
 // PVS-Studio Static Code Analyzer for C, C++, C#, and Java: http://www.viva64.com
 
-#include <stdlib.h>
+#include "Inc/utils/linked_list.h"
 
-#include "Inc/memory_management.h"
-#include "Inc/platform.h"
-#include "Inc/spinlock.h"
-#include "Inc/unique_lock.h"
-
-using OS::SpinLock;
-using OS::UniqueLock;
-
-static SpinLock lock;
-
-CLINKAGE void* OsMalloc(size_t size) {
-  // TODO(javier_varez): Migrate to custom allocation scheme
-  UniqueLock<SpinLock> l(lock);
-  void* ptr = malloc(size);
-  return ptr;
+void LinkedList_RemoveElement(LinkedList_t** head, LinkedList_t* element) {
+  while (*head != NULL) {
+    if (*head == element) {
+      *head = element->next;
+      break;
+    }
+    head = &(*head)->next;
+  }
 }
 
-CLINKAGE void OsFree(void* ptr) {
-  UniqueLock<SpinLock> l(lock);
-  free(ptr);
+void LinkedList_AddElement(LinkedList_t** head, LinkedList_t* element) {
+  while (*head != NULL) {
+    head = &(*head)->next;
+  }
+  *head = element;
+  element->next = NULL;
 }

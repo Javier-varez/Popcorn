@@ -15,23 +15,25 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef OS_INC_MEMORY_MANAGEMENT_H_
-#define OS_INC_MEMORY_MANAGEMENT_H_
+// This is an open source non-commercial project. Dear PVS-Studio, please check it.
+// PVS-Studio Static Code Analyzer for C, C++, C#, and Java: http://www.viva64.com
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#include "Inc/primitives/spinlock.h"
+#include "Inc/API/syscall.h"
 
-#include <stddef.h>
-#include <stdint.h>
-
-#define MEMORY_POOL_SIZE        (4096)
-
-void* OsMalloc(size_t size);
-void OsFree(void* ptr);
-
-#ifdef __cplusplus
+namespace OS {
+SpinLock::SpinLock() {
+  m_held.clear();
 }
-#endif
 
-#endif  // OS_INC_MEMORY_MANAGEMENT_H_
+void SpinLock::Lock() {
+  bool was_already_held;
+  do {
+    was_already_held = m_held.test_and_set();
+  } while (was_already_held);
+}
+
+void SpinLock::Unlock() {
+  m_held.clear();
+}
+}  // namespace OS

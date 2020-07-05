@@ -1,25 +1,29 @@
-/* 
+/*
  * This file is part of the Cortex-M Scheduler
  * Copyright (c) 2020 Javier Alvarez
- * 
- * This program is free software: you can redistribute it and/or modify  
- * it under the terms of the GNU General Public License as published by  
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, version 3.
  *
- * This program is distributed in the hope that it will be useful, but 
- * WITHOUT ANY WARRANTY; without even the implied warranty of 
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU 
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
  * General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License 
+ * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
 // This is an open source non-commercial project. Dear PVS-Studio, please check it.
 // PVS-Studio Static Code Analyzer for C, C++, C#, and Java: http://www.viva64.com
 
-#include "Inc/kernel.h"
-#include "Inc/cortex-m_port.h"
+#include "Inc/core/cortex-m_port.h"
+#include "Inc/core/kernel.h"
+
+namespace OS {
+  extern Kernel *g_kernel;
+}  // namespace OS
 
 CLINKAGE __NAKED void PendSV_Handler() {
   asm volatile (
@@ -39,7 +43,7 @@ CLINKAGE __NAKED void PendSV_Handler() {
     "               isb                               \n"
     "               mov lr, %[exc_return]             \n"
     "RetISR:        bx lr                             \n"
-    : : 
+    : :
     [current_task_ptr] "r" (&OS::g_kernel->m_current_task),
     [exc_return] "i" (EXC_RETURN_PSP_UNPRIV),
     [TriggerScheduler] "r" (OS::Kernel::TriggerScheduler_Static)
@@ -65,4 +69,13 @@ void MCU::DisableInterruptsInternal() const {
 void MCU::EnableInterruptsInternal() const {
   asm volatile("cpsie i");
 }
-};
+
+std::uintptr_t GetPC() {
+  std::uintptr_t lr = 0;
+  asm volatile (
+    "mov %[link_reg], lr \n"
+  : : [link_reg] "r" (lr));
+  return lr;
+}
+
+}  // namespace Hw

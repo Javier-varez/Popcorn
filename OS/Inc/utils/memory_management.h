@@ -15,22 +15,23 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef OS_INC_CRITICAL_SECTION_H_
-#define OS_INC_CRITICAL_SECTION_H_
+#ifndef OS_INC_UTILS_MEMORY_MANAGEMENT_H_
+#define OS_INC_UTILS_MEMORY_MANAGEMENT_H_
 
-#include "Inc/cortex-m_port.h"
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-namespace OS {
-class CriticalSection {
- public:
-  inline CriticalSection() {
-    Hw::g_mcu->DisableInterrupts();
-  }
+#include <stddef.h>
+#include <stdint.h>
 
-  inline ~CriticalSection() {
-    Hw::g_mcu->EnableInterrupts();
-  }
-};
-}  // namespace OS
+#define MEMORY_POOL_SIZE        (4096)
 
-#endif  // OS_INC_CRITICAL_SECTION_H_
+void* OsMalloc(size_t size);
+void OsFree(void* ptr);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif  // OS_INC_UTILS_MEMORY_MANAGEMENT_H_

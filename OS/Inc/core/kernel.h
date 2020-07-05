@@ -1,26 +1,27 @@
-/* 
+/*
  * This file is part of the Cortex-M Scheduler
  * Copyright (c) 2020 Javier Alvarez
- * 
- * This program is free software: you can redistribute it and/or modify  
- * it under the terms of the GNU General Public License as published by  
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, version 3.
  *
- * This program is distributed in the hope that it will be useful, but 
- * WITHOUT ANY WARRANTY; without even the implied warranty of 
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU 
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
  * General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License 
+ * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef OS_INC_KERNEL_H_
-#define OS_INC_KERNEL_H_
+#ifndef OS_INC_CORE_KERNEL_H_
+#define OS_INC_CORE_KERNEL_H_
 
+#include "Inc/API/syscall.h"
+#include "Inc/core/lockable.h"
+#include "Inc/utils/linked_list.h"
 #include "Inc/platform.h"
-#include "Inc/blockable.h"
-#include "Inc/linked_list.h"
 #include "Inc/os_config.h"
 
 // Forward declaration of classes and functions
@@ -45,7 +46,7 @@ enum class task_state {
 
 union block_argument {
   std::uint64_t timestamp;
-  const OS::Blockable* blockable;
+  const OS::Lockable* lockable;
 };
 
 struct task_control_block {
@@ -93,19 +94,19 @@ struct task_stack_frame {
   auto_task_stack_frame autosave;
 };
 
-class Kernel {
+class Kernel : public ISyscall {
  public:
-  Kernel();
+  explicit Kernel(Hw::MCU* mcu);
 
-  TEST_VIRTUAL void StartOS();
-  TEST_VIRTUAL void CreateTask(task_func func, void* arg, OS::Priority priority,
-                               const char* name, std::uint32_t stack_size);
-  TEST_VIRTUAL void Sleep(std::uint32_t ticks);
-  TEST_VIRTUAL void DestroyTask();
-  TEST_VIRTUAL void Yield();
-  TEST_VIRTUAL void Wait(const Blockable* blockable);
-  TEST_VIRTUAL void RegisterError(auto_task_stack_frame* args);
-  TEST_VIRTUAL void Lock(Blockable* blockable, bool acquired);
+  void StartOS() override;
+  void CreateTask(task_func func, void* arg, OS::Priority priority,
+                  const char* name, std::uint32_t stack_size) override;
+  void Sleep(std::uint32_t ticks) override;
+  void DestroyTask() override;
+  void Yield() override;
+  void Wait(const Lockable& lockable) override;
+  void RegisterError() override;
+  void Lock(Lockable& lockable, bool acquired) override;
 
   TEST_VIRTUAL std::uint64_t GetTicks();
   TEST_VIRTUAL ~Kernel() = default;
@@ -119,25 +120,27 @@ class Kernel {
   TEST_VIRTUAL void HandleTick();
   TEST_VIRTUAL void TriggerSchedulerEntryHook();
   TEST_VIRTUAL void TriggerSchedulerExitHook();
-  TEST_VIRTUAL void HandleErrorHook(std::uint32_t pc, std::uint32_t r0,
-                                    std::uint32_t r1, std::uint32_t r2,
-                                    std::uint32_t r3, std::uint32_t sp);
+
   TEST_VIRTUAL void CheckTaskNeedsAwakening();
 
   static void TriggerScheduler_Static();
 
+  Hw::MCU*                    m_mcu           = nullptr;
   task_control_block*         m_current_task  = nullptr;
   LinkedList_t*               m_ready_list    = nullptr;
   LinkedList_t*               m_blocked_list  = nullptr;
   LinkedList_t*               m_sleeping_list = nullptr;
+
+  /**
+   * @todo Use atomic for m_ticks instead of a regular uint64_t variable
+   */
   std::uint64_t               m_ticks         = 0;
 
   friend void ::SysTick_Handler();
   friend void ::PendSV_Handler();
   friend class ::KernelTest;
 };
-extern Kernel *g_kernel;
 
 }  // namespace OS
 
-#endif  // OS_INC_KERNEL_H_
+#endif  // OS_INC_CORE_KERNEL_H_
