@@ -38,12 +38,8 @@ using std::uintptr_t;
 namespace OS {
 Kernel* g_kernel = nullptr;
 
-// Check the minimum task stack size is larger than the stack frame + alignment
-static_assert(MINIMUM_TASK_STACK_SIZE >
-              (sizeof(task_stack_frame) + sizeof(uint32_t)));
-
-static uint8_t* AllocateTaskStack(task_control_block *tcb,
-                                       size_t size) {
+uint8_t* Kernel::AllocateTaskStack(OS::task_control_block *tcb,
+                                   size_t size) const {
   uint8_t* task_stack_top = nullptr;
 
   uint8_t* stack = reinterpret_cast<uint8_t*>(OsMalloc(size));
@@ -53,56 +49,6 @@ static uint8_t* AllocateTaskStack(task_control_block *tcb,
   }
 
   return task_stack_top;
-}
-
-/**
- * @todo Move this function to MCU Port
- */
-static uint8_t* AllocateTaskStackFrame(uint8_t* stack_ptr) {
-  if (stack_ptr == nullptr) {
-    return nullptr;
-  }
-
-  auto* stack_frame = stack_ptr - sizeof(auto_task_stack_frame);
-  uintptr_t stack_frame_ptr = reinterpret_cast<uintptr_t>(stack_frame);
-
-  // Align on 8 byte boundary
-  return reinterpret_cast<uint8_t*>(stack_frame_ptr & 0xfffffff8);
-}
-
-/**
- * @todo Move this function to MCU Port
- */
-static task_stack_frame*
-AllocateCompleteTaskStackFrame(uint8_t* stack_ptr) {
-  uint8_t* ptr = AllocateTaskStackFrame(stack_ptr);
-  if (ptr == nullptr) {
-    return nullptr;
-  } else {
-    ptr -= sizeof(manual_task_stack_frame);
-    return reinterpret_cast<task_stack_frame*>(ptr);
-  }
-}
-
-/**
- * @todo Move this function to MCU Port
- */
-void DestroyTaskVeneer() {
-  Syscall::Instance().DestroyTask();
-}
-
-/**
- * @todo Move this function to MCU Port
- */
-static void InitializeTask(task_stack_frame* stack_frame_ptr,
-                           task_func func,
-                           void* arg) {
-  auto lr = reinterpret_cast<uint32_t>(DestroyTaskVeneer);
-  stack_frame_ptr->autosave.pc = reinterpret_cast<uint32_t>(func);
-  stack_frame_ptr->autosave.r0 = reinterpret_cast<uintptr_t>(arg);
-  stack_frame_ptr->autosave.xpsr = XPSR_INIT_VALUE;
-  stack_frame_ptr->autosave.lr = lr;
-  stack_frame_ptr->manualsave.lr = EXC_RETURN_PSP_UNPRIV;
 }
 
 void Kernel::CreateTask(task_func func,
@@ -125,12 +71,7 @@ void Kernel::CreateTask(task_func func,
     return;
   }
 
-  task_stack_frame* task_stack = AllocateCompleteTaskStackFrame(task_stack_top);
-  if (nullptr == task_stack) {
-    return;
-  }
-
-  InitializeTask(task_stack, func, arg);
+  uint8_t* task_stack = m_mcu->InitializeTask(task_stack_top, func, arg);
 
   auto task_stack_ptr = reinterpret_cast<uintptr_t>(task_stack);
   tcb->stack_ptr = task_stack_ptr;

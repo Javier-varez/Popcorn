@@ -41,9 +41,9 @@ using std::unique_ptr;
 using std::make_unique;
 
 using OS::SyscallIdx;
-using OS::auto_task_stack_frame;
 using OS::Priority;
 using OS::Lockable;
+using Hw::auto_task_stack_frame;
 using Hw::g_SCB;
 using Hw::SCB_t;
 using Hw::g_SysTick;
@@ -56,6 +56,8 @@ class MCUWithLowLevelMock: public Hw::MCU {
   MOCK_METHOD(void, DisableInterruptsInternal, (), (const));
   MOCK_METHOD(void, EnableInterruptsInternal, (), (const));
 };
+
+void DestroyTaskVeneer();
 
 class MCUTest: public ::testing::Test {
  private:
@@ -270,4 +272,32 @@ TEST_F(MCUTest, Initialize) {
 
   EXPECT_TRUE(scb.CCR & Hw::SCB_CCR_STKALIGN);
 }
+
+TEST_F(MCUTest, InitializeTask) {
+  constexpr uint32_t kStackSize = 1024;
+  uint8_t stack[kStackSize];
+  OS::task_func func = [](void* arg) { };
+  uint8_t arg = 12;
+
+  // Align stack to 8 bytes
+  uintptr_t stack_base = reinterpret_cast<uintptr_t>(&stack) & 0xFFFFFFF8;
+  uint8_t* stack_top = reinterpret_cast<uint8_t*>(stack_base + kStackSize);
+
+  // Initialize the task
+  uint8_t* stack_frame_ptr = mcu->InitializeTask(stack_top, func, &arg);
+  auto* stack_frame = reinterpret_cast<task_stack_frame*>(stack_frame_ptr);
+
+  const auto destroy_function = reinterpret_cast<uintptr_t>(Hw::DestroyTaskVeneer);
+  const auto task_function = reinterpret_cast<uintptr_t>(func);
+  const auto arg_ptr = reinterpret_cast<uintptr_t>(&arg);
+
+  // Check the expectations
+  ASSERT_EQ(stack_frame_ptr, stack_top - 68);
+  ASSERT_EQ(stack_frame->manualsave.lr, EXC_RETURN_PSP_UNPRIV);
+  ASSERT_EQ(stack_frame->autosave.lr, destroy_function);
+  ASSERT_EQ(stack_frame->autosave.pc, task_function);
+  ASSERT_EQ(stack_frame->autosave.r0, arg_ptr);
+  ASSERT_EQ(stack_frame->autosave.xpsr, XPSR_INIT_VALUE);
+}
+
 }  // namespace Hw

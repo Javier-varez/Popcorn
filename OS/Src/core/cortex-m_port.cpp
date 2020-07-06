@@ -22,21 +22,41 @@
 #include "Inc/core/cortex-m_registers.h"
 #include "Inc/core/kernel.h"
 
+#include "Inc/API/syscall.h"
+
+#include "Inc/utils/memory_management.h"
+
 #include "Inc/os_config.h"
+
 
 using std::uint8_t;
 using std::uint16_t;
 using std::uint32_t;
 
 using OS::SyscallIdx;
-using OS::auto_task_stack_frame;
 using OS::Priority;
 using OS::Lockable;
 
+// Check the minimum task stack size is larger than the stack frame + alignment
+static_assert(MINIMUM_TASK_STACK_SIZE >
+              (sizeof(Hw::task_stack_frame) + sizeof(uint32_t)));
+
 namespace Hw {
 
+/**
+ * @brief Global pointer to the singleton MCU instance.
+ *        Used for static ISRs that need to call the MCU.
+ */
 MCU* g_mcu = nullptr;
+
+/**
+ * @brief SCB (System Control Block) registers pointer.
+ */
 volatile SCB_t *g_SCB = reinterpret_cast<SCB_t*>(SCB_ADDR);
+
+/**
+ * @brief SysTick (System Timer) registers pointer.
+ */
 volatile SysTick_t *g_SysTick = reinterpret_cast<SysTick_t*>(SYSTICK_ADDR);
 
 MCU::MCU() :
@@ -181,8 +201,71 @@ void MCU::EnableInterrupts() {
   }
 }
 
+task_stack_frame* MCU::AllocateTaskStackFrame(uint8_t* stack_ptr) const {
+  if (stack_ptr == nullptr) {
+    return nullptr;
+  }
+  auto stack_frame = reinterpret_cast<uintptr_t>(stack_ptr);
+
+  // Reserve enough space for the automatically stored task stack frame
+  stack_frame -= sizeof(auto_task_stack_frame);
+
+  // The automatically stored task frame needs to be aligned to 8 bytes
+  // according to the AAPCS.
+  stack_frame &= 0xFFFFFFF8;
+
+  // Now reserve enough space for the manual task stack frame
+  stack_frame -= sizeof(manual_task_stack_frame);
+
+  return reinterpret_cast<task_stack_frame*>(stack_frame);
+}
+
+void DestroyTaskVeneer() {
+  OS::Syscall::Instance().DestroyTask();
+}
+
+uint8_t* MCU::InitializeTask(uint8_t* stack_top,
+                             OS::task_func func,
+                             void* arg) const {
+  if (nullptr == stack_top) {
+    return nullptr;
+  }
+
+  auto* stack_frame_ptr = AllocateTaskStackFrame(stack_top);
+  if (nullptr == stack_frame_ptr) {
+    return nullptr;
+  }
+
+  auto lr = reinterpret_cast<uint32_t>(DestroyTaskVeneer);
+  stack_frame_ptr->autosave.pc = reinterpret_cast<uint32_t>(func);
+  stack_frame_ptr->autosave.r0 = reinterpret_cast<uintptr_t>(arg);
+  stack_frame_ptr->autosave.xpsr = XPSR_INIT_VALUE;
+  stack_frame_ptr->autosave.lr = lr;
+  stack_frame_ptr->manualsave.lr = EXC_RETURN_PSP_UNPRIV;
+
+  return reinterpret_cast<uint8_t*>(stack_frame_ptr);
+}
+
+/**
+ * @brief Weak definition for testing purposes only.
+ *        The actual implementation requires assembly
+ *        and is located in cortex-m_port_asm.cpp
+ */
 __WEAK void MCU::DisableInterruptsInternal() const { }
+
+/**
+ * @brief Weak definition for testing purposes only.
+ *        The actual implementation requires assembly
+ *        and is located in cortex-m_port_asm.cpp
+ */
 __WEAK void MCU::EnableInterruptsInternal() const { }
+
+/**
+ * @brief Weak definition for testing purposes only.
+ *        The actual implementation requires assembly
+ *        and is located in cortex-m_port_asm.cpp
+ * @return hardcoded to 0 in this fake implementation.
+ */
 __WEAK std::uintptr_t GetPC() {
   return 0;
 }

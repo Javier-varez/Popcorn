@@ -33,9 +33,6 @@ class KernelTest;
 CLINKAGE void SysTick_Handler();
 CLINKAGE void PendSV_Handler();
 
-#define EXC_RETURN_PSP_UNPRIV       (0xFFFFFFFDU)
-#define XPSR_INIT_VALUE             (1U << 24)
-
 namespace OS {
 enum class task_state {
   READY,
@@ -66,34 +63,6 @@ struct task_control_block {
   std::uint64_t                        run_last_timestamp;
 };
 
-struct auto_task_stack_frame {
-  std::uint32_t r0;
-  std::uint32_t r1;
-  std::uint32_t r2;
-  std::uint32_t r3;
-  std::uint32_t r12;
-  std::uint32_t lr;
-  std::uint32_t pc;
-  std::uint32_t xpsr;
-};
-
-struct manual_task_stack_frame {
-  std::uint32_t r4;
-  std::uint32_t r5;
-  std::uint32_t r6;
-  std::uint32_t r7;
-  std::uint32_t r8;
-  std::uint32_t r9;
-  std::uint32_t r10;
-  std::uint32_t r11;
-  std::uint32_t lr;
-};
-
-struct task_stack_frame {
-  manual_task_stack_frame manualsave;
-  auto_task_stack_frame autosave;
-};
-
 class Kernel : public ISyscall {
  public:
   explicit Kernel(Hw::MCU* mcu);
@@ -122,6 +91,9 @@ class Kernel : public ISyscall {
   TEST_VIRTUAL void TriggerSchedulerExitHook();
 
   TEST_VIRTUAL void CheckTaskNeedsAwakening();
+
+  TEST_VIRTUAL std::uint8_t* AllocateTaskStack(OS::task_control_block *tcb,
+                                               std::size_t size) const;
 
   static void TriggerScheduler_Static();
 

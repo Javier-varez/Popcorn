@@ -39,14 +39,19 @@ using std::make_unique;
 using std::unique_ptr;
 
 using OS::task_control_block;
-using OS::task_stack_frame;
 using OS::Kernel;
 using OS::Priority;
 using OS::task_state;
 using OS::Lockable;
 using OS::SyscallIdx;
 
+using Hw::task_stack_frame;
+
 using Hw::g_svc;
+
+namespace OS {
+void IdleTask(void *arg);
+}  // namespace OS
 
 class KernelTest: public ::testing::Test {
  public:
@@ -112,6 +117,10 @@ class KernelTest: public ::testing::Test {
         .Times(1).WillOnce(Return(tcb)).RetiresOnSaturation();
     EXPECT_CALL(memManagement, Malloc(kStackSize))
         .Times(1).WillOnce(Return(stack)).RetiresOnSaturation();
+    EXPECT_CALL(mcu, InitializeTask(stack + kStackSize,
+                                    TaskFunction,
+                                    nullptr))
+                                    .WillOnce(Return(stack + kStackSize - 10));
     kernel->CreateTask(TaskFunction, nullptr, priority, "TaskName", kStackSize);
   }
 
@@ -120,6 +129,9 @@ class KernelTest: public ::testing::Test {
         .Times(1).WillOnce(Return(&idleTCB)).RetiresOnSaturation();
     EXPECT_CALL(memManagement, Malloc(MINIMUM_TASK_STACK_SIZE))
         .Times(1).WillOnce(Return(idleStack)).RetiresOnSaturation();
+    EXPECT_CALL(mcu, InitializeTask(idleStack + MINIMUM_TASK_STACK_SIZE,
+        OS::IdleTask, nullptr))
+        .WillOnce(Return(idleStack + MINIMUM_TASK_STACK_SIZE - 10));
     EXPECT_CALL(mcu, Initialize()).Times(1).RetiresOnSaturation();
     EXPECT_CALL(mcu, TriggerPendSV()).Times(1).RetiresOnSaturation();
     kernel->StartOS();
@@ -144,10 +156,6 @@ uint8_t KernelTest::task1Stack[] __attribute__((aligned(8)));
 uint8_t KernelTest::task2Stack[] __attribute__((aligned(8)));
 uint8_t KernelTest::task3Stack[] __attribute__((aligned(8)));
 
-namespace OS {
-void IdleTask(void *arg);
-void DestroyTaskVeneer();
-}  // namespace OS
 
 TEST_F(KernelTest, StackPtrIsFirstFieldInTCB) {
   // Assembly code relies on the stack_ptr being at
@@ -158,11 +166,15 @@ TEST_F(KernelTest, StackPtrIsFirstFieldInTCB) {
 }
 
 TEST_F(KernelTest, CreateTaskInitializesTCB_Test) {
+  uint8_t arg = 0;
   EXPECT_CALL(memManagement, Malloc(kStackSize))
     .Times(1).WillOnce(Return(task1Stack)).RetiresOnSaturation();
   EXPECT_CALL(memManagement, Malloc(sizeof(task_control_block)))
     .Times(1).WillOnce(Return(&task1TCB)).RetiresOnSaturation();
-  uint8_t arg = 0;
+  EXPECT_CALL(mcu, InitializeTask(task1Stack + kStackSize,
+                                  TaskFunction,
+                                  &arg))
+                                  .WillOnce(Return(task1Stack + kStackSize - 10));
   kernel->CreateTask(TaskFunction,
                      &arg,
                      Priority::Level_7,
@@ -179,32 +191,8 @@ TEST_F(KernelTest, CreateTaskInitializesTCB_Test) {
   ASSERT_EQ(task1TCB.stack_base, (uintptr_t)task1Stack);
   ASSERT_EQ(task1TCB.run_last_timestamp, 0ULL);
   ASSERT_EQ(reinterpret_cast<uint8_t*>(task1TCB.stack_ptr),
-    task1Stack + kStackSize - sizeof(task_stack_frame));
+    task1Stack + kStackSize - 10);
 }
-
-TEST_F(KernelTest, CreateTaskInitializesStack_Test) {
-  EXPECT_CALL(memManagement, Malloc(kStackSize))
-    .Times(1).WillOnce(Return(task1Stack)).RetiresOnSaturation();
-  EXPECT_CALL(memManagement, Malloc(sizeof(task_control_block)))
-    .Times(1).WillOnce(Return(&task1TCB)).RetiresOnSaturation();
-  uint8_t arg = 0;
-  kernel->CreateTask(TaskFunction, &arg, Priority::Level_7,
-                     "NewTask", kStackSize);
-
-  task_stack_frame& stack_frame =
-      *reinterpret_cast<task_stack_frame*>(task1TCB.stack_ptr);
-
-  auto destroy_function = reinterpret_cast<uintptr_t>(OS::DestroyTaskVeneer);
-  auto task_function = reinterpret_cast<uintptr_t>(&TaskFunction);
-  auto arg_ptr = reinterpret_cast<uintptr_t>(&arg);
-
-  ASSERT_EQ(stack_frame.manualsave.lr, EXC_RETURN_PSP_UNPRIV);
-  ASSERT_EQ(stack_frame.autosave.lr, destroy_function);
-  ASSERT_EQ(stack_frame.autosave.pc, task_function);
-  ASSERT_EQ(stack_frame.autosave.r0, arg_ptr);
-  ASSERT_EQ(stack_frame.autosave.xpsr, XPSR_INIT_VALUE);
-}
-
 
 TEST_F(KernelTest, StartOS_Test) {
   EXPECT_CALL(mcu, Initialize()).Times(1);
@@ -215,7 +203,9 @@ TEST_F(KernelTest, StartOS_Test) {
     .Times(1).WillOnce(Return(idleStack)).RetiresOnSaturation();
   EXPECT_CALL(memManagement, Malloc(sizeof(task_control_block)))
     .Times(1).WillOnce(Return(&idleTCB)).RetiresOnSaturation();
-
+  EXPECT_CALL(mcu, InitializeTask(idleStack + MINIMUM_TASK_STACK_SIZE,
+    OS::IdleTask, nullptr))
+    .WillOnce(Return(idleStack + MINIMUM_TASK_STACK_SIZE - 10));
   kernel->StartOS();
 
   ASSERT_EQ(CONTAINER_OF(GetReadyTaskList(), task_control_block, list),
@@ -227,7 +217,7 @@ TEST_F(KernelTest, StartOS_Test) {
   ASSERT_EQ(idleTCB.func, &OS::IdleTask);
   ASSERT_EQ(idleTCB.stack_base, (uintptr_t)idleStack);
   ASSERT_EQ(reinterpret_cast<uint8_t*>(idleTCB.stack_ptr),
-    idleStack + MINIMUM_TASK_STACK_SIZE - sizeof(task_stack_frame));
+            idleStack + MINIMUM_TASK_STACK_SIZE - 10);
 }
 
 TEST_F(KernelTest, Yield_Test) {
@@ -242,6 +232,10 @@ TEST_F(KernelTest, CreateTask_Test) {
     .Times(1).WillOnce(Return(task1Stack)).RetiresOnSaturation();
   EXPECT_CALL(memManagement, Malloc(sizeof(task_control_block)))
     .Times(1).WillOnce(Return(&task1TCB)).RetiresOnSaturation();
+  EXPECT_CALL(mcu, InitializeTask(task1Stack + kStackSize,
+                                  TaskFunction,
+                                  &args[0]))
+                                  .WillOnce(Return(task1Stack + kStackSize - 10));
   kernel->CreateTask(TaskFunction, &args[0], Priority::Level_3,
                      "TestTask1", kStackSize);
 
@@ -249,6 +243,10 @@ TEST_F(KernelTest, CreateTask_Test) {
     .Times(1).WillOnce(Return(task2Stack)).RetiresOnSaturation();
   EXPECT_CALL(memManagement, Malloc(sizeof(task_control_block)))
     .Times(1).WillOnce(Return(&task2TCB)).RetiresOnSaturation();
+  EXPECT_CALL(mcu, InitializeTask(task2Stack + kStackSize,
+                                  TaskFunction,
+                                  &args[1]))
+                                  .WillOnce(Return(task2Stack + kStackSize - 10));
   kernel->CreateTask(TaskFunction, &args[1], Priority::Level_7,
                        "TestTask2", kStackSize);
 
@@ -274,10 +272,9 @@ TEST_F(KernelTest, CreateTask_Test) {
 }
 
 TEST_F(KernelTest, CreateTask_MallocFail_Test) {
+  uint8_t arg = 0;
   EXPECT_CALL(memManagement, Malloc(_))
     .Times(AnyNumber()).WillRepeatedly(Return(nullptr));
-
-  uint8_t arg = 0;
   kernel->CreateTask(TaskFunction, &arg, Priority::Level_3,
                      "Nulltask", MINIMUM_TASK_STACK_SIZE);
 
@@ -291,6 +288,10 @@ TEST_F(KernelTest, DestroyTask_Test) {
     .Times(1).WillOnce(Return(task1Stack)).RetiresOnSaturation();
   EXPECT_CALL(memManagement, Malloc(sizeof(task_control_block)))
     .Times(1).WillOnce(Return(&task1TCB)).RetiresOnSaturation();
+  EXPECT_CALL(mcu, InitializeTask(task1Stack + kStackSize,
+                                  TaskFunction,
+                                  &args[0]))
+                                  .WillOnce(Return(task1Stack + kStackSize - 10));
   kernel->CreateTask(TaskFunction, &args[0], Priority::Level_3,
                      "TestTask1", kStackSize);
 
@@ -298,6 +299,9 @@ TEST_F(KernelTest, DestroyTask_Test) {
     .Times(1).WillOnce(Return(task2Stack)).RetiresOnSaturation();
   EXPECT_CALL(memManagement, Malloc(sizeof(task_control_block)))
     .Times(1).WillOnce(Return(&task2TCB)).RetiresOnSaturation();
+  EXPECT_CALL(mcu, InitializeTask(task2Stack + kStackSize,
+    TaskFunction, &args[1]))
+    .WillOnce(Return(task2Stack + kStackSize - 10));
   kernel->CreateTask(TaskFunction, &args[1], Priority::Level_7,
                      "TestTask2", kStackSize);
 
@@ -343,11 +347,13 @@ TEST_F(KernelTest, Ticks_Test) {
 }
 
 TEST_F(KernelTest, TriggerScheduler_Test) {
+  uint8_t arg = 0;
   EXPECT_CALL(memManagement, Malloc(_))
     .Times(1).WillOnce(Return(task1Stack)).RetiresOnSaturation();
   EXPECT_CALL(memManagement, Malloc(sizeof(task_control_block)))
     .Times(1).WillOnce(Return(&task1TCB)).RetiresOnSaturation();
-  uint8_t arg = 0;
+  EXPECT_CALL(mcu, InitializeTask(task1Stack + kStackSize,
+    TaskFunction, &arg)).WillOnce(Return(task1Stack + kStackSize - 10));
   kernel->CreateTask(TaskFunction, &arg, Priority::Level_3,
                      "TestTask1", kStackSize);
 
@@ -358,6 +364,9 @@ TEST_F(KernelTest, TriggerScheduler_Test) {
   EXPECT_CALL(memManagement, Malloc(sizeof(task_control_block)))
     .Times(1).WillOnce(Return(&idleTCB)).RetiresOnSaturation();
 
+  EXPECT_CALL(mcu, InitializeTask(idleStack + MINIMUM_TASK_STACK_SIZE,
+    OS::IdleTask, nullptr))
+    .WillOnce(Return(task1Stack + MINIMUM_TASK_STACK_SIZE - 10));
   kernel->StartOS();
 
   EXPECT_EQ(GetCurrentTask(), nullptr);
@@ -375,6 +384,9 @@ TEST_F(KernelTest, Sleep_Test) {
   EXPECT_CALL(memManagement, Malloc(sizeof(task_control_block)))
     .Times(1).WillOnce(Return(&task1TCB)).RetiresOnSaturation();
   uint8_t arg = 0;
+  EXPECT_CALL(mcu, InitializeTask(task1Stack + kStackSize,
+    TaskFunction, &arg))
+    .WillOnce(Return(task1Stack + kStackSize - 10));
   kernel->CreateTask(TaskFunction, &arg, Priority::Level_3,
                      "TestTask1", kStackSize);
 
@@ -384,6 +396,9 @@ TEST_F(KernelTest, Sleep_Test) {
     .Times(1).WillOnce(Return(idleStack)).RetiresOnSaturation();
   EXPECT_CALL(memManagement, Malloc(sizeof(task_control_block)))
     .Times(1).WillOnce(Return(&idleTCB)).RetiresOnSaturation();
+  EXPECT_CALL(mcu, InitializeTask(idleStack + MINIMUM_TASK_STACK_SIZE,
+    OS::IdleTask, nullptr))
+    .WillOnce(Return(task1Stack + MINIMUM_TASK_STACK_SIZE - 10));
   kernel->StartOS();
 
   TriggerScheduler();
@@ -442,6 +457,9 @@ TEST_F(KernelTest, Wait_Test) {
   EXPECT_CALL(memManagement, Malloc(sizeof(task_control_block)))
     .Times(1).WillOnce(Return(&task1TCB)).RetiresOnSaturation();
   uint8_t arg = 0;
+  EXPECT_CALL(mcu, InitializeTask(task1Stack + kStackSize,
+    TaskFunction, &arg))
+    .WillOnce(Return(task1Stack + kStackSize - 10));
   kernel->CreateTask(TaskFunction, &arg, Priority::Level_2,
                      "TestTask1", kStackSize);
 
@@ -451,6 +469,9 @@ TEST_F(KernelTest, Wait_Test) {
     .Times(1).WillOnce(Return(idleStack)).RetiresOnSaturation();
   EXPECT_CALL(memManagement, Malloc(sizeof(task_control_block)))
     .Times(1).WillOnce(Return(&idleTCB)).RetiresOnSaturation();
+  EXPECT_CALL(mcu, InitializeTask(idleStack + MINIMUM_TASK_STACK_SIZE,
+    OS::IdleTask, nullptr))
+    .WillOnce(Return(task1Stack + MINIMUM_TASK_STACK_SIZE - 10));
   kernel->StartOS();
 
   TriggerScheduler();
@@ -460,6 +481,9 @@ TEST_F(KernelTest, Wait_Test) {
     .Times(1).WillOnce(Return(task2Stack)).RetiresOnSaturation();
   EXPECT_CALL(memManagement, Malloc(sizeof(task_control_block)))
     .Times(1).WillOnce(Return(&task2TCB)).RetiresOnSaturation();
+  EXPECT_CALL(mcu, InitializeTask(task2Stack + kStackSize,
+    TaskFunction, &arg))
+    .WillOnce(Return(task2Stack + kStackSize - 10));
   kernel->CreateTask(TaskFunction, &arg, Priority::Level_3,
                      "TestTask2", kStackSize);
 
@@ -492,6 +516,9 @@ TEST_F(KernelTest, Priority_Test) {
   EXPECT_CALL(memManagement, Malloc(kStackSize))
     .Times(1).WillOnce(Return(task1Stack)).RetiresOnSaturation();
   uint8_t arg = 0;
+  EXPECT_CALL(mcu, InitializeTask(task1Stack + kStackSize,
+    TaskFunction, &arg))
+    .WillOnce(Return(task1Stack + kStackSize - 10));
   kernel->CreateTask(TaskFunction, &arg, Priority::Level_1,
                      "TestTask1", kStackSize);
 
@@ -501,6 +528,9 @@ TEST_F(KernelTest, Priority_Test) {
     .Times(1).WillOnce(Return(idleStack)).RetiresOnSaturation();
   EXPECT_CALL(mcu, Initialize()).Times(1).RetiresOnSaturation();
   EXPECT_CALL(mcu, TriggerPendSV()).Times(1).RetiresOnSaturation();
+  EXPECT_CALL(mcu, InitializeTask(idleStack + MINIMUM_TASK_STACK_SIZE,
+    OS::IdleTask, nullptr))
+    .WillOnce(Return(task1Stack + MINIMUM_TASK_STACK_SIZE - 10));
   kernel->StartOS();
 
   TriggerScheduler();
@@ -514,6 +544,9 @@ TEST_F(KernelTest, Priority_Test) {
     .Times(1).WillOnce(Return(&task2TCB)).RetiresOnSaturation();
   EXPECT_CALL(memManagement, Malloc(kStackSize))
     .Times(1).WillOnce(Return(task2Stack)).RetiresOnSaturation();
+  EXPECT_CALL(mcu, InitializeTask(task2Stack + kStackSize,
+    TaskFunction, &arg))
+    .WillOnce(Return(task2Stack + kStackSize - 10));
   kernel->CreateTask(TaskFunction, &arg, Priority::Level_3,
                      "TestTask2", kStackSize);
 
@@ -531,6 +564,9 @@ TEST_F(KernelTest, Priority_Test) {
     .Times(1).WillOnce(Return(&task3TCB)).RetiresOnSaturation();
   EXPECT_CALL(memManagement, Malloc(kStackSize))
     .Times(1).WillOnce(Return(task3Stack)).RetiresOnSaturation();
+  EXPECT_CALL(mcu, InitializeTask(task3Stack + kStackSize,
+    TaskFunction, &arg))
+    .WillOnce(Return(task3Stack + kStackSize - 10));
   kernel->CreateTask(TaskFunction, &arg, Priority::Level_2,
                      "TestTask3", kStackSize);
 
@@ -551,6 +587,9 @@ TEST_F(KernelTest, EqualPriorityAppliesRoundRobin_Test) {
   EXPECT_CALL(memManagement, Malloc(kStackSize))
     .Times(1).WillOnce(Return(task1Stack)).RetiresOnSaturation();
   uint8_t arg = 0;
+  EXPECT_CALL(mcu, InitializeTask(task1Stack + kStackSize,
+    TaskFunction, &arg))
+    .WillOnce(Return(task1Stack + kStackSize - 10));
   kernel->CreateTask(TaskFunction, &arg, Priority::Level_1,
                      "TestTask1", kStackSize);
 
@@ -560,12 +599,18 @@ TEST_F(KernelTest, EqualPriorityAppliesRoundRobin_Test) {
     .Times(1).WillOnce(Return(idleStack)).RetiresOnSaturation();
   EXPECT_CALL(mcu, Initialize()).Times(1).RetiresOnSaturation();
   EXPECT_CALL(mcu, TriggerPendSV()).Times(1).RetiresOnSaturation();
+  EXPECT_CALL(mcu, InitializeTask(idleStack + MINIMUM_TASK_STACK_SIZE,
+    OS::IdleTask, nullptr))
+    .WillOnce(Return(task1Stack + MINIMUM_TASK_STACK_SIZE - 10));
   kernel->StartOS();
 
   EXPECT_CALL(memManagement, Malloc(sizeof(task_control_block)))
     .Times(1).WillOnce(Return(&task2TCB)).RetiresOnSaturation();
   EXPECT_CALL(memManagement, Malloc(kStackSize))
     .Times(1).WillOnce(Return(task2Stack)).RetiresOnSaturation();
+  EXPECT_CALL(mcu, InitializeTask(task2Stack + kStackSize,
+    TaskFunction, &arg))
+    .WillOnce(Return(task2Stack + kStackSize - 10));
   kernel->CreateTask(TaskFunction, &arg, Priority::Level_1,
                      "TestTask2", kStackSize);
 

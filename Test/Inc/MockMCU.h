@@ -28,6 +28,10 @@ class MockMCU : public Hw::MCU {
   MOCK_METHOD(void, RegisterSyscallImpl, (OS::ISyscall*));
   MOCK_METHOD(void, Initialize, (), (const));
   MOCK_METHOD(void, TriggerPendSV, (), (const));
+  MOCK_METHOD(uint8_t*, InitializeTask, (uint8_t* stack_top,
+                                         OS::task_func func,
+                                         void* arg),
+                                        (const));
 };
 
 class MCU_SVC {
