@@ -23,4 +23,7 @@ plog-converter \
     -dV1042 \
     -a 'GA:1,2,3;OP:1,2,3;CS:1,2,3' \
     -o build/static_analysis/HTML \
-    build/static_analysis/project.log
+    build/static_analysis/project.log \
+    | tee build/static_analysis.log
+
+grep build/static_analysis.log -e "Filtered messages: 0"
