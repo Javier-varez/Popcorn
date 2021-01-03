@@ -4,7 +4,6 @@ CC := gcc
 CXX := g++
 LD := g++
 
-ifeq ($(PREREQUISITES_OK),true)
 TARGET_CFLAGS := \
 	-mthumb \
 	-mcpu=cortex-m3 \
@@ -53,4 +52,41 @@ LOCAL_EXPORTED_DIRS := \
 	$(LOCAL_DIR)/STM32CubeF1/Drivers/CMSIS/Core/Include
 
 include $(BUILD_STATIC_LIB)
-endif
+
+# Build GoogleTest
+include $(CLEAR_VARS)
+LOCAL_NAME := googletest
+LOCAL_CFLAGS := \
+	-Igoogletest/googletest/include \
+	-Igoogletest/googlemock/include \
+	-Igoogletest/googletest/ \
+	-Igoogletest/googlemock/ \
+	-m32 \
+	-Os \
+	-g3
+LOCAL_CXXFLAGS := $(LOCAL_CFLAGS)
+LOCAL_EXPORTED_DIRS := \
+	googletest/googletest/include \
+	googletest/googlemock/include
+LOCAL_ARFLAGS := -rcs
+LOCAL_LDFLAGS := \
+	-pthread \
+	-lstdc++
+LOCAL_SRC := \
+	googletest/googletest/src/gtest.cc \
+	googletest/googletest/src/gtest-death-test.cc \
+	googletest/googletest/src/gtest-filepath.cc \
+	googletest/googletest/src/gtest-matchers.cc \
+	googletest/googletest/src/gtest-port.cc \
+	googletest/googletest/src/gtest-printers.cc \
+	googletest/googletest/src/gtest-test-part.cc \
+	googletest/googletest/src/gtest-typed-test.cc \
+	googletest/googlemock/src/gmock.cc \
+	googletest/googlemock/src/gmock-cardinalities.cc \
+	googletest/googlemock/src/gmock-matchers.cc \
+	googletest/googlemock/src/gmock-internal-utils.cc \
+	googletest/googlemock/src/gmock-spec-builders.cc \
+	googletest/googletest/src/gtest_main.cc
+include $(BUILD_STATIC_LIB)
+
+

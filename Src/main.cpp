@@ -21,6 +21,7 @@
 #include <stm32f1xx_hal.h>
 
 #include <cstring>
+#include <cstdio>
 #include <memory>
 
 #include "Inc/API/syscall.h"

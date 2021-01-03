@@ -4,31 +4,11 @@ CC := g++
 CXX := g++
 LD := g++
 
-PREREQUISITES_OK := true
-
-ifeq ($(GOOGLETEST_LIBS32_DIR),)
-$(warning missing googletest/googlemock 32 bit libraries. Skip $(LOCAL_DIR))
-PREREQUISITES_OK := false
-endif
-
-ifeq ($(GOOGLEMOCK_INCLUDE_DIR),)
-$(warning missing googletest include files. Skip $(LOCAL_DIR))
-PREREQUISITES_OK := false
-endif
-
-ifeq ($(GOOGLETEST_INCLUDE_DIR),)
-$(warning missing googlemock include files. Skip $(LOCAL_DIR))
-PREREQUISITES_OK := false
-endif
-
-ifeq ($(PREREQUISITES_OK),true)
 include $(CLEAR_VARS)
 LOCAL_NAME := TestOS
 LOCAL_CFLAGS := \
 	-I$(LOCAL_DIR)/../ \
 	-I$(LOCAL_DIR)/../OS \
-	-I$(GOOGLEMOCK_INCLUDE_DIR) \
-	-I$(GOOGLETEST_INCLUDE_DIR) \
 	-DUNITTEST \
 	-m32 \
 	-g3 \
@@ -54,11 +34,11 @@ LOCAL_SRC := \
 	$(wildcard $(LOCAL_DIR)/Src/*.cpp)
 
 LOCAL_LDFLAGS := \
-	-L$(GOOGLETEST_LIBS32_DIR) \
-	-lgtest \
-	-lgtest_main \
-	-lgmock \
-	-lpthread
+	-lpthread \
+	-lstdc++
+
+LOCAL_STATIC_LIBS := \
+	libgoogletest
 include $(BUILD_BINARY)
 
 # Test coverage generation
@@ -74,4 +54,3 @@ build/coverage/test_coverage.info: build/targets/TestOS
 TestCoverage: build/coverage/test_coverage.info
 .PHONY += TestCoverage
 
-endif
