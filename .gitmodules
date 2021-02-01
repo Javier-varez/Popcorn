@@ -1,9 +1,0 @@
-[submodule "STM32CubeF1"]
-	path = STM32CubeF1
-	url = https://github.com/STMicroelectronics/STM32CubeF1.git
-[submodule "buildsystem"]
-	path = buildsystem
-	url = git@github.com:Javier-varez/buildsystem.git
-[submodule "googletest"]
-	path = googletest
-	url = https://github.com/google/googletest.git
