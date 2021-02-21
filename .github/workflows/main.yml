@@ -15,6 +15,7 @@ jobs:
       uses: Javier-varez/google-repo-action@v0.2
       with:
         manifest-url: 'Javier-varez/manifest'
+        manifest-group: 'popcorn'
         checkout-deps: true
     - name: arm-none-eabi-gcc
       uses: fiam/arm-none-eabi-gcc@v1.0.3
