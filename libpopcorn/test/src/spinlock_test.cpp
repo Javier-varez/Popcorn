@@ -67,12 +67,7 @@ TEST_F(SpinLockTest, CheckCanBeReleased) {
   EXPECT_EQ(GetHeldFlag().test_and_set(), false);
 }
 
-TEST_F(SpinLockTest, NotAquiredUntilReleasedByOtherThread) {
-  // Cannot include using std::literals::chrono_literals::operator""ms
-  // g++ complains about a user-defined literal that does not begin with
-  // an _, which is a compiler bug (false-positive compiler warning),
-  // as this is not an user-defined literal.
-  using namespace std::literals::chrono_literals;  // NOLINT
+TEST_F(SpinLockTest, NotAcquiredUntilReleasedByOtherThread) {
   using std::chrono::duration_cast;
   using std::chrono::high_resolution_clock;
   using std::chrono::milliseconds;
@@ -84,6 +79,7 @@ TEST_F(SpinLockTest, NotAquiredUntilReleasedByOtherThread) {
   EXPECT_EQ(GetHeldFlag().test_and_set(), true);
 
   auto action = [this]() {
+    using namespace std::literals::chrono_literals;  // NOLINT
     sleep_for(30ms);
     spinlock->Unlock();
   };
@@ -97,7 +93,7 @@ TEST_F(SpinLockTest, NotAquiredUntilReleasedByOtherThread) {
   EXPECT_EQ(GetHeldFlag().test_and_set(), true);
 
   auto total_ms = duration_cast<milliseconds>(second_point - first_point).count();
-  EXPECT_EQ(total_ms, 30);
+  EXPECT_GE(total_ms, 30);
 
   spinlock->Unlock();
   EXPECT_EQ(GetHeldFlag().test_and_set(), false);
