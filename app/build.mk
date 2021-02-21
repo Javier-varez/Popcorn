@@ -27,8 +27,10 @@ LOCAL_LINKER_FILE := \
     $(LOCAL_DIR)/STM32F103X8_FLASH.ld
 
 LOCAL_SRC := \
-    $(wildcard $(LOCAL_DIR)/src/*.c) \
-    $(wildcard $(LOCAL_DIR)/src/*.cpp)
+    $(LOCAL_DIR)/src/main.cpp \
+    $(LOCAL_DIR)/src/startup.cpp \
+    $(LOCAL_DIR)/src/uart.cpp \
+    $(LOCAL_DIR)/src/system_stm32f1xx.c
 
 LOCAL_STATIC_LIBS := \
     libstm32cubef1 \

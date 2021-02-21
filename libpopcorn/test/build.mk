@@ -23,8 +23,15 @@ LOCAL_CXXFLAGS := \
 
 LOCAL_SRC := \
     $(TEST_SRC) \
-    $(wildcard $(LOCAL_DIR)/src/*.c) \
-    $(wildcard $(LOCAL_DIR)/src/*.cpp)
+    $(LOCAL_DIR)/src/cortex-m_port_test.cpp \
+    $(LOCAL_DIR)/src/kernel_test.cpp \
+    $(LOCAL_DIR)/src/linked_list_test.cpp \
+    $(LOCAL_DIR)/src/mock_assert.cpp \
+    $(LOCAL_DIR)/src/mock_mcu.cpp \
+    $(LOCAL_DIR)/src/mock_mem_management.cpp \
+    $(LOCAL_DIR)/src/mutex_test.cpp \
+    $(LOCAL_DIR)/src/spinlock_test.cpp \
+    $(LOCAL_DIR)/src/syscall_test.cpp
 
 LOCAL_LDFLAGS := \
     -lpthread
