@@ -19,10 +19,17 @@ LOCAL_CXXFLAGS := \
     -fno-rtti
 
 LOCAL_SRC := \
-    $(wildcard $(LOCAL_DIR)/src/*.c) \
-    $(wildcard $(LOCAL_DIR)/src/*/*.c) \
-    $(wildcard $(LOCAL_DIR)/src/*.cpp) \
-    $(wildcard $(LOCAL_DIR)/src/*/*.cpp)
+    $(LOCAL_DIR)/src/core/cortex-m_port.cpp \
+    $(LOCAL_DIR)/src/core/cortex-m_port_asm.cpp \
+    $(LOCAL_DIR)/src/primitives/critical_section.cpp \
+    $(LOCAL_DIR)/src/core/kernel.cpp \
+    $(LOCAL_DIR)/src/core/lockable.cpp \
+    $(LOCAL_DIR)/src/utils/memory_management.cpp \
+    $(LOCAL_DIR)/src/primitives/mutex.cpp \
+    $(LOCAL_DIR)/src/platform.cpp \
+    $(LOCAL_DIR)/src/primitives/spinlock.cpp \
+    $(LOCAL_DIR)/src/core/syscalls.cpp \
+    $(LOCAL_DIR)/src/utils/linked_list.c
 
 LOCAL_EXPORTED_DIRS := \
     $(LOCAL_DIR)/inc
