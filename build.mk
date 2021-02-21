@@ -14,6 +14,5 @@ TARGET_CFLAGS := \
 	-DSTM32F103xB \
 	$(GLOBAL_CFLAGS)
 
-
 include $(call all-makefiles-under, $(LOCAL_DIR))
 
