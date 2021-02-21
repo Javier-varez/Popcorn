@@ -1,4 +1,4 @@
-# Cortex-M Scheduler
+# Popcorn Kernel
 
 ## Table of contents
 
