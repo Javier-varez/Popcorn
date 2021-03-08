@@ -19,7 +19,11 @@
 
 namespace Hw {
 MockSVC *g_svc = nullptr;
-}  // namespace Hw
+// Use this ASM symbol to force the linker to load symbols from this translation unit.
+// Otherwise, since all of these symbols are already defined outside (even if weak)
+// they are ignored.
+volatile uint32_t dummy_asm_symbol;
+}  // namespace HW
 
 void _svc_call(Popcorn::SyscallIdx id) {
   if (Hw::g_svc) {

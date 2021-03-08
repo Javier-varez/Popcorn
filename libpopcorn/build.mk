@@ -3,10 +3,6 @@ LOCAL_DIR := $(call current-dir)
 
 include $(CLEAR_VARS)
 
-LOCAL_CROSS_COMPILE := arm-none-eabi-
-CC := gcc
-CXX := g++
-
 LOCAL_NAME := popcorn
 
 LOCAL_CFLAGS := \
@@ -15,8 +11,7 @@ LOCAL_CFLAGS := \
 
 LOCAL_CXXFLAGS := \
     $(LOCAL_CFLAGS) \
-    -fno-exceptions \
-    -fno-rtti
+    $(TARGET_CXXFLAGS)
 
 LOCAL_SRC := \
     $(LOCAL_DIR)/src/core/cortex-m_port.cpp \
@@ -34,6 +29,12 @@ LOCAL_SRC := \
 LOCAL_EXPORTED_DIRS := \
     $(LOCAL_DIR)/inc
 LOCAL_ARFLAGS := -rcs
+
+LOCAL_ARM_ARCHITECTURE := v7-m
+LOCAL_ARM_FPU := nofp
+LOCAL_COMPILER := arm_clang
+LOCAL_STATIC_LIBS := \
+    libpostform
 
 include $(BUILD_STATIC_LIB)
 

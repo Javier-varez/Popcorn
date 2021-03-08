@@ -19,7 +19,7 @@ LOCAL_CFLAGS := \
 
 LOCAL_CXXFLAGS := \
     $(LOCAL_CFLAGS) \
-    -std=gnu++17
+    $(GLOBAL_CXXFLAGS)
 
 LOCAL_SRC := \
     $(TEST_SRC) \
