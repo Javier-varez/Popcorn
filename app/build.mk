@@ -1,11 +1,6 @@
 LOCAL_DIR := $(call current-dir)
 
 include $(CLEAR_VARS)
-
-LOCAL_CROSS_COMPILE := arm-none-eabi-
-CC := gcc
-CXX := g++
-
 LOCAL_NAME := popcorn_stm32f103
 
 LOCAL_CFLAGS := \
@@ -14,27 +9,29 @@ LOCAL_CFLAGS := \
 
 LOCAL_CXXFLAGS := \
     $(LOCAL_CFLAGS) \
-    -fno-exceptions \
-    -fno-rtti
+    $(TARGET_CXXFLAGS)
 
 LOCAL_LDFLAGS := \
     -Wl,--gc-sections \
-    --specs=nano.specs \
-    --specs=nosys.specs \
-    -lstdc++
+    -lnosys
 
 LOCAL_LINKER_FILE := \
-    $(LOCAL_DIR)/STM32F103X8_FLASH.ld
+    $(LOCAL_DIR)/memory.ld
 
 LOCAL_SRC := \
     $(LOCAL_DIR)/src/main.cpp \
-    $(LOCAL_DIR)/src/startup.cpp \
     $(LOCAL_DIR)/src/uart.cpp \
     $(LOCAL_DIR)/src/system_stm32f1xx.c
 
+LOCAL_ARM_ARCHITECTURE := v7-m
+LOCAL_ARM_FPU := nofp
+LOCAL_COMPILER := arm_clang
+
 LOCAL_STATIC_LIBS := \
+    libcortex_m_startup \
     libstm32cubef1 \
-    libpopcorn
+    libpopcorn \
+    libpostform
 
 include $(BUILD_BINARY)
 

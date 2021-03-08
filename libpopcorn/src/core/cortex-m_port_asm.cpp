@@ -25,6 +25,13 @@ namespace Popcorn {
   extern Kernel *g_kernel;
 }  // namespace Popcorn
 
+namespace Hw {
+  // Use this ASM symbol to force the linker to load symbols from this translation unit.
+  // Otherwise, since all of these symbols are already defined outside (even if weak)
+  // they are ignored.
+  volatile uint32_t dummy_asm_symbol;
+}  // namespace HW
+
 CLINKAGE __NAKED void PendSV_Handler() {
   asm volatile (
     "               ldr r1, [%[current_task_ptr]]     \n"
@@ -47,6 +54,7 @@ CLINKAGE __NAKED void PendSV_Handler() {
     [current_task_ptr] "r" (&Popcorn::g_kernel->m_current_task),
     [exc_return] "i" (EXC_RETURN_PSP_UNPRIV),
     [TriggerScheduler] "r" (Popcorn::Kernel::TriggerScheduler_Static)
+    : "r1", "r0", "lr"
   );
 }
 
@@ -58,6 +66,7 @@ CLINKAGE __NAKED void SVC_Handler() {
     "    mrsne r0, psp           \n"
     "    bx %[svc_handler]       \n"
     : : [svc_handler] "r" (Hw::MCU::HandleSVC_Static)
+    : "r0", "lr"
   );
 }
 

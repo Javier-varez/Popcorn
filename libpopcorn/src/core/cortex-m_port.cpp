@@ -63,6 +63,8 @@ MCU::MCU() :
   m_syscall_impl(nullptr),
   m_nested_interrupt_level(0) {
   g_mcu = this;
+  extern volatile uint32_t dummy_asm_symbol;
+  (void) dummy_asm_symbol;
 }
 
 void MCU::RegisterSyscallImpl(Popcorn::ISyscall* syscall_impl) {
