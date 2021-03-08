@@ -20,7 +20,6 @@ LOCAL_LINKER_FILE := \
 
 LOCAL_SRC := \
     $(LOCAL_DIR)/src/main.cpp \
-    $(LOCAL_DIR)/src/uart.cpp \
     $(LOCAL_DIR)/src/system_stm32f1xx.c
 
 LOCAL_ARM_ARCHITECTURE := v7-m

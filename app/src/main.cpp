@@ -27,27 +27,38 @@
 #include "popcorn/API/syscall.h"
 #include "popcorn/primitives/mutex.h"
 #include "popcorn/primitives/unique_lock.h"
-
-// Used for Internal Hooks
 #include "popcorn/core/kernel.h"
 
-#include "app/uart.h"
-
-using std::uint16_t;
-using std::uint32_t;
-using std::snprintf;
+#include "postform/rtt_logger.h"
+#include "postform/config.h"
 
 using Popcorn::Mutex;
 using Popcorn::UniqueLock;
 using Popcorn::Syscall;
 using Popcorn::Priority;
 
-using App::Uart;
+Postform::RttLogger logger;
 
-Uart uart;
+namespace Postform {
+uint64_t getGlobalTimestamp() {
+  static std::atomic_uint32_t count;
+  return count.fetch_add(1, std::memory_order_relaxed);
+}
+}  // namespace Postform
+
+DECLARE_POSTFORM_CONFIG(.timestamp_frequency = 1);
 
 void App_SysTick_Hook() {
   HAL_IncTick();
+}
+
+extern "C" void HardFault_Handler() {
+  LOG_ERROR(&logger, "Hardfault handler was called!");
+
+  auto CFSR = reinterpret_cast<volatile uint32_t *>(0xE000ED28);
+  LOG_ERROR(&logger, "CFSR Value = %x", *CFSR);
+
+  while (true) { }
 }
 
 void Popcorn::Kernel::TriggerSchedulerEntryHook() {
@@ -78,6 +89,7 @@ static Mutex mutex;
 
 static void gpio_task(void* arg) {
   TaskArgs* args = reinterpret_cast<TaskArgs*>(arg);
+  LOG_INFO(&logger, "Gpio taks Bank %p, Pin %hu", args->bank, args->pin);
 
   if (args->bank == GPIOA) {
     __HAL_RCC_GPIOA_CLK_ENABLE();
@@ -98,6 +110,7 @@ static void gpio_task(void* arg) {
   while (true) {  // -V776
     Syscall::Instance().Sleep(args->delay);
     HAL_GPIO_TogglePin(args->bank, args->pin);
+    LOG_INFO(&logger, "Toggling pin %p, %hu", args->bank, args->pin);
   }
 }
 
@@ -130,15 +143,13 @@ static void ConfigureClk() {
 }
 
 void AteAssertFailed(std::uintptr_t PC) {
-  constexpr unsigned int kLen = 30;
-  char str[kLen];
-  snprintf(str, kLen, "ASSERT 0x%08x\r\n", PC);
-  uart.Send(str);
+  LOG_ERROR(&logger, "ASSERT %x", PC);
 }
 
 void InitTask(void *args) {
   TaskArgs** taskArgs = reinterpret_cast<TaskArgs**>(args);
   Syscall& syscall = Syscall::Instance();
+  LOG_INFO(&logger, "Running InitTask");
 
   {
     UniqueLock<Mutex> l(mutex);
@@ -158,6 +169,8 @@ CLINKAGE HAL_StatusTypeDef HAL_InitTick(uint32_t) {
 }
 
 int main() {
+  LOG_INFO(&logger, "Popcorn is starting up!");
+
   struct TaskArgs args_task_1 = {
     "GPIO_C13",
     GPIOC,
@@ -184,10 +197,6 @@ int main() {
 
   HAL_Init();
   ConfigureClk();
-  uart.Init();
-
-  const char initStr[] = "STM32F1 Is alive!\r\n";
-  uart.Send(initStr);
 
   __HAL_RCC_GPIOA_CLK_ENABLE();
   GPIO_InitTypeDef gpio;
