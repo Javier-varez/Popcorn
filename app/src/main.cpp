@@ -31,22 +31,17 @@
 
 #include "postform/rtt_logger.h"
 #include "postform/config.h"
-
-using Popcorn::Mutex;
-using Popcorn::UniqueLock;
-using Popcorn::Syscall;
-using Popcorn::Priority;
+#include "postform/types.h"
 
 Postform::RttLogger logger;
 
 namespace Postform {
 uint64_t getGlobalTimestamp() {
-  static std::atomic_uint32_t count;
-  return count.fetch_add(1, std::memory_order_relaxed);
+  return HAL_GetTick();
 }
 }  // namespace Postform
 
-DECLARE_POSTFORM_CONFIG(.timestamp_frequency = 1);
+DECLARE_POSTFORM_CONFIG(.timestamp_frequency = 1'000);
 
 void App_SysTick_Hook() {
   HAL_IncTick();
@@ -78,18 +73,19 @@ void Popcorn::Kernel::TriggerSchedulerExitHook() {
 }
 
 struct TaskArgs {
-  const char*     name;
-  GPIO_TypeDef*   bank;
-  uint16_t   pin;
-  uint32_t   delay;
-  uint32_t   stack_size;
+  Postform::InternedString interned_name;
+  const char* name;
+  GPIO_TypeDef* bank;
+  uint16_t pin;
+  uint32_t delay;
+  uint32_t stack_size;
 };
 
-static Mutex mutex;
+static Popcorn::Mutex mutex;
 
 static void gpio_task(void* arg) {
   TaskArgs* args = reinterpret_cast<TaskArgs*>(arg);
-  LOG_INFO(&logger, "Gpio taks Bank %p, Pin %hu", args->bank, args->pin);
+  LOG_INFO(&logger, "Starting task for %k", args->interned_name);
 
   if (args->bank == GPIOA) {
     __HAL_RCC_GPIOA_CLK_ENABLE();
@@ -98,7 +94,7 @@ static void gpio_task(void* arg) {
   }
 
   {
-    UniqueLock<Mutex> l(mutex);
+    Popcorn::UniqueLock<Popcorn::Mutex> l(mutex);
     GPIO_InitTypeDef gpio;
     gpio.Pin = args->pin;
     gpio.Mode = GPIO_MODE_OUTPUT_PP;
@@ -108,9 +104,9 @@ static void gpio_task(void* arg) {
   }
 
   while (true) {  // -V776
-    Syscall::Instance().Sleep(args->delay);
+    Popcorn::Syscall::Instance().Sleep(args->delay);
     HAL_GPIO_TogglePin(args->bank, args->pin);
-    LOG_INFO(&logger, "Toggling pin %p, %hu", args->bank, args->pin);
+    LOG_DEBUG(&logger, "Toggling pin %k", args->interned_name);
   }
 }
 
@@ -148,14 +144,14 @@ void AteAssertFailed(std::uintptr_t PC) {
 
 void InitTask(void *args) {
   TaskArgs** taskArgs = reinterpret_cast<TaskArgs**>(args);
-  Syscall& syscall = Syscall::Instance();
+  auto& syscall = Popcorn::Syscall::Instance();
   LOG_INFO(&logger, "Running InitTask");
 
   {
-    UniqueLock<Mutex> l(mutex);
+    Popcorn::UniqueLock<Popcorn::Mutex> l(mutex);
 
     for (uint32_t i = 0; taskArgs[i] != nullptr; i++) {
-      syscall.CreateTask(gpio_task, taskArgs[i], Priority::Level_0,
+      syscall.CreateTask(gpio_task, taskArgs[i], Popcorn::Priority::Level_0,
                          taskArgs[i]->name, taskArgs[i]->stack_size);
     }
 
@@ -172,6 +168,7 @@ int main() {
   LOG_INFO(&logger, "Popcorn is starting up!");
 
   struct TaskArgs args_task_1 = {
+    "GPIO_C13"_intern,
     "GPIO_C13",
     GPIOC,
     GPIO_PIN_13,
@@ -180,6 +177,7 @@ int main() {
   };
 
   struct TaskArgs args_task_2 = {
+    "GPIO_A0"_intern,
     "GPIO_A0",
     GPIOA,
     GPIO_PIN_0,
@@ -198,6 +196,8 @@ int main() {
   HAL_Init();
   ConfigureClk();
 
+  Postform::RttLogger logger;
+
   __HAL_RCC_GPIOA_CLK_ENABLE();
   GPIO_InitTypeDef gpio;
   gpio.Pin = GPIO_PIN_1;
@@ -206,8 +206,8 @@ int main() {
   gpio.Speed = GPIO_SPEED_FREQ_HIGH;
   HAL_GPIO_Init(GPIOA, &gpio);
 
-  auto& syscall = Syscall::Instance();
-  syscall.CreateTask(InitTask, args, Priority::Level_0,
+  auto& syscall = Popcorn::Syscall::Instance();
+  syscall.CreateTask(InitTask, args, Popcorn::Priority::Level_0,
                                  "Init task", InitTaskStackSize);
   syscall.StartOS();
   return 0;
