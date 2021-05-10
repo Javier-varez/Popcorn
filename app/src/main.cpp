@@ -15,45 +15,44 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-// This is an open source non-commercial project. Dear PVS-Studio, please check it.
-// PVS-Studio Static Code Analyzer for C, C++, C#, and Java: http://www.viva64.com
+// This is an open source non-commercial project. Dear PVS-Studio, please check
+// it. PVS-Studio Static Code Analyzer for C, C++, C#, and Java:
+// http://www.viva64.com
 
 #include <stm32f1xx_hal.h>
 
-#include <cstring>
 #include <cstdio>
+#include <cstring>
 #include <memory>
 
 #include "popcorn/API/syscall.h"
+#include "popcorn/core/kernel.h"
 #include "popcorn/primitives/mutex.h"
 #include "popcorn/primitives/unique_lock.h"
-#include "popcorn/core/kernel.h"
-
-#include "postform/rtt_logger.h"
 #include "postform/config.h"
+#include "postform/rtt/transport.h"
+#include "postform/serial_logger.h"
 #include "postform/types.h"
 
-Postform::RttLogger logger;
+Postform::Rtt::Transport transport;
+Postform::SerialLogger<Postform::Rtt::Transport> logger{&transport};
 
 namespace Postform {
-uint64_t getGlobalTimestamp() {
-  return HAL_GetTick();
-}
+uint64_t getGlobalTimestamp() { return HAL_GetTick(); }
 }  // namespace Postform
 
 DECLARE_POSTFORM_CONFIG(.timestamp_frequency = 1'000);
 
-void App_SysTick_Hook() {
-  HAL_IncTick();
-}
+void App_SysTick_Hook() { HAL_IncTick(); }
 
 extern "C" void HardFault_Handler() {
   LOG_ERROR(&logger, "Hardfault handler was called!");
 
-  auto CFSR = reinterpret_cast<volatile uint32_t *>(0xE000ED28);
+  auto CFSR = reinterpret_cast<volatile uint32_t*>(0xE000ED28);
   LOG_ERROR(&logger, "CFSR Value = %x", *CFSR);
 
-  while (true) { }
+  while (true) {
+  }
 }
 
 void Popcorn::Kernel::TriggerSchedulerEntryHook() {
@@ -126,10 +125,8 @@ static void ConfigureClk() {
   HAL_RCC_OscConfig(&oscConfig);
 
   RCC_ClkInitTypeDef clkInit;
-  clkInit.ClockType = RCC_CLOCKTYPE_SYSCLK |
-                      RCC_CLOCKTYPE_HCLK |
-                      RCC_CLOCKTYPE_PCLK1 |
-                      RCC_CLOCKTYPE_PCLK2;
+  clkInit.ClockType = RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_HCLK |
+                      RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;
   clkInit.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   clkInit.AHBCLKDivider = RCC_SYSCLK_DIV1;
   clkInit.APB1CLKDivider = RCC_HCLK_DIV2;
@@ -138,11 +135,9 @@ static void ConfigureClk() {
   HAL_RCC_ClockConfig(&clkInit, FLASH_ACR_LATENCY_2);
 }
 
-void AteAssertFailed(std::uintptr_t PC) {
-  LOG_ERROR(&logger, "ASSERT %x", PC);
-}
+void AteAssertFailed(std::uintptr_t PC) { LOG_ERROR(&logger, "ASSERT %x", PC); }
 
-void InitTask(void *args) {
+void InitTask(void* args) {
   TaskArgs** taskArgs = reinterpret_cast<TaskArgs**>(args);
   auto& syscall = Popcorn::Syscall::Instance();
   LOG_INFO(&logger, "Running InitTask");
@@ -160,43 +155,23 @@ void InitTask(void *args) {
 }
 
 // HAL should not use the systick, It is used by the OS
-CLINKAGE HAL_StatusTypeDef HAL_InitTick(uint32_t) {
-  return HAL_OK;
-}
+CLINKAGE HAL_StatusTypeDef HAL_InitTick(uint32_t) { return HAL_OK; }
 
 int main() {
   LOG_INFO(&logger, "Popcorn is starting up!");
 
-  struct TaskArgs args_task_1 = {
-    "GPIO_C13"_intern,
-    "GPIO_C13",
-    GPIOC,
-    GPIO_PIN_13,
-    1000,
-    256
-  };
+  struct TaskArgs args_task_1 = {"GPIO_C13"_intern, "GPIO_C13", GPIOC,
+                                 GPIO_PIN_13,       1000,       256};
 
-  struct TaskArgs args_task_2 = {
-    "GPIO_A0"_intern,
-    "GPIO_A0",
-    GPIOA,
-    GPIO_PIN_0,
-    1500,
-    256
-  };
+  struct TaskArgs args_task_2 = {"GPIO_A0"_intern, "GPIO_A0", GPIOA,
+                                 GPIO_PIN_0,       1500,      256};
 
-  struct TaskArgs* args[] = {
-    &args_task_1,
-    &args_task_2,
-    nullptr
-  };
+  struct TaskArgs* args[] = {&args_task_1, &args_task_2, nullptr};
 
   static constexpr uint32_t InitTaskStackSize = 512;
 
   HAL_Init();
   ConfigureClk();
-
-  Postform::RttLogger logger;
 
   __HAL_RCC_GPIOA_CLK_ENABLE();
   GPIO_InitTypeDef gpio;
@@ -207,8 +182,8 @@ int main() {
   HAL_GPIO_Init(GPIOA, &gpio);
 
   auto& syscall = Popcorn::Syscall::Instance();
-  syscall.CreateTask(InitTask, args, Popcorn::Priority::Level_0,
-                                 "Init task", InitTaskStackSize);
+  syscall.CreateTask(InitTask, args, Popcorn::Priority::Level_0, "Init task",
+                     InitTaskStackSize);
   syscall.StartOS();
   return 0;
 }
