@@ -1,5 +1,5 @@
 /*
- * This file is part of the Popcorn
+ * This file is part of Popcorn
  * Copyright (c) 2020 Javier Alvarez
  *
  * This program is free software: you can redistribute it and/or modify
