@@ -33,8 +33,15 @@
 #include "postform/rtt/transport.h"
 #include "postform/serial_logger.h"
 #include "postform/types.h"
+#include "postform/utils.h"
 
-Postform::Rtt::Transport transport;
+static UNINIT std::array<std::uint8_t, 1024> s_up_buffer;
+static std::array<Postform::Rtt::ChannelDescriptor, 1> s_up_descriptors{
+    {{"postform_channel", s_up_buffer}}};
+
+extern "C" Postform::Rtt::ControlBlock<1, 0> _SEGGER_RTT{s_up_descriptors, {}};
+
+Postform::Rtt::Transport transport{&_SEGGER_RTT.up_channels[0]};
 Postform::SerialLogger<Postform::Rtt::Transport> logger{&transport};
 
 namespace Postform {
@@ -42,6 +49,17 @@ uint64_t getGlobalTimestamp() { return HAL_GetTick(); }
 }  // namespace Postform
 
 DECLARE_POSTFORM_CONFIG(.timestamp_frequency = 1'000);
+
+namespace Ditto {
+void assert_failed(const char* condition, int line, const char* file) {
+  LOG_ERROR(&logger,
+            "Oh boy, something really bad happened! "
+            "Condition `%s` failed in file `%s`, line %d",
+            condition, file, line);
+  while (true) {
+  }
+}
+}  // namespace Ditto
 
 void App_SysTick_Hook() { HAL_IncTick(); }
 

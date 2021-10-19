@@ -2,7 +2,6 @@ LOCAL_DIR := $(call current-dir)
 
 
 include $(CLEAR_VARS)
-
 LOCAL_NAME := popcorn
 
 LOCAL_CFLAGS := \
@@ -34,7 +33,8 @@ LOCAL_ARM_ARCHITECTURE := v7-m
 LOCAL_ARM_FPU := nofp
 LOCAL_COMPILER := arm_clang
 LOCAL_STATIC_LIBS := \
-    libpostform
+    libpostform \
+    libditto
 
 include $(BUILD_STATIC_LIB)
 
@@ -51,4 +51,3 @@ TEST_SRC := \
     $(LOCAL_DIR)/src/primitives/critical_section.cpp
 
 include $(LOCAL_DIR)/test/build.mk
-

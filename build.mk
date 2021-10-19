@@ -6,6 +6,7 @@ GLOBAL_CFLAGS := \
     -Wall \
     -Werror \
     -Wno-gnu-string-literal-operator-template \
+    -Wno-deprecated-volatile \
     -ffunction-sections \
     -fdata-sections
 
@@ -16,7 +17,7 @@ TARGET_CFLAGS := \
     $(GLOBAL_CFLAGS)
 
 GLOBAL_CXXFLAGS := \
-    -std=gnu++17 \
+    -std=gnu++20 \
     -fno-exceptions \
     -fno-rtti
 
@@ -24,4 +25,3 @@ TARGET_CXXFLAGS := \
     $(GLOBAL_CXXFLAGS)
 
 include $(call all-makefiles-under, $(LOCAL_DIR))
-
