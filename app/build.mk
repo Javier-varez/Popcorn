@@ -30,7 +30,7 @@ LOCAL_STATIC_LIBS := \
     libcortex_m_startup \
     libstm32cubef1 \
     libpopcorn \
-    libpostform
+    libpostform \
+    libditto
 
 include $(BUILD_BINARY)
-
