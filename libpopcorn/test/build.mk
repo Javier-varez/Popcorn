@@ -2,8 +2,8 @@ LOCAL_DIR := $(call current-dir)
 
 include $(CLEAR_VARS)
 
-CC := gcc
-CXX := g++
+CC := clang
+CXX := clang++
 
 LOCAL_NAME := popcorn_test
 
@@ -39,4 +39,3 @@ LOCAL_LDFLAGS := \
 LOCAL_MULTILIB := 32
 
 include $(BUILD_HOST_TEST)
-
